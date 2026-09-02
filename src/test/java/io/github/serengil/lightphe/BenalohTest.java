@@ -1,0 +1,41 @@
+package io.github.serengil.lightphe;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import io.github.serengil.lightphe.model.Ciphertext;
+import java.math.BigInteger;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/** Port of {@code tests/test_benaloh.py}. */
+class BenalohTest {
+
+    @Test
+    @DisplayName("Benaloh supports homomorphic addition and scalar multiplication")
+    void testApi() {
+        LightPHE cs = LightPHE.builder().algorithmName("Benaloh").keySize(50).build();
+
+        BigInteger r = cs.cs().keys().publicNumber("r");
+
+        long m1 = 17;
+        long m2 = 21;
+
+        Ciphertext c1 = cs.encrypt(m1);
+        Ciphertext c2 = cs.encrypt(m2);
+
+        // homomorphic addition
+        assertThat(cs.decrypt(c1.add(c2))).isEqualTo(BigInteger.valueOf(m1 + m2));
+
+        // homomorphic scalar multiplication
+        assertThat(BigInteger.valueOf(m1 * m2))
+                .as("Plain multiplication result exceeds plaintext modulo")
+                .isLessThan(r);
+        assertThat(cs.decrypt(c1.multiply(m2))).isEqualTo(BigInteger.valueOf(m1 * m2));
+        assertThat(cs.decrypt(c2.multiply(m1))).isEqualTo(BigInteger.valueOf(m1 * m2));
+
+        // unsupported homomorphic operations
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.multiply(c2));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.xor(c2));
+    }
+}

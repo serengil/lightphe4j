@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    Lint rules for lightphe4j.
+
+    Formatting is owned by Spotless (google-java-format, AOSP style), so this
+    configuration deliberately leaves whitespace, wrapping and indentation
+    alone and checks only the things a formatter cannot: documentation of the
+    public API, import hygiene, and constructs that are legal Java but almost
+    always a mistake.
+-->
+<module name="Checker">
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- No tabs anywhere. -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+
+    <!-- Files end with a newline. -->
+    <module name="NewlineAtEndOfFile"/>
+
+    <module name="LineLength">
+        <property name="max" value="100"/>
+        <!--
+            Long URLs in javadoc, and pre-generated key material inside text blocks, cannot be
+            wrapped without changing their meaning.
+        -->
+        <property name="ignorePattern"
+                  value="^package.*|^import.*|^\s*\*.*https?://|^\s*&lt;a href|^\s*&quot;[A-Za-z0-9_]+&quot;:\s.*"/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <!-- ==================== Documentation ==================== -->
+
+        <!-- Every public type carries javadoc. -->
+        <module name="JavadocType">
+            <property name="scope" value="public"/>
+            <property name="allowMissingParamTags" value="false"/>
+        </module>
+
+        <!-- Every public method carries javadoc, with tags that match the signature. -->
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="public"/>
+            <property name="allowMissingPropertyJavadoc" value="false"/>
+            <!-- Overrides inherit their documentation. -->
+            <property name="allowedAnnotations" value="Override"/>
+            <property name="minLineCount" value="-1"/>
+        </module>
+        <module name="JavadocMethod">
+            <property name="accessModifiers" value="public"/>
+            <property name="validateThrows" value="false"/>
+        </module>
+
+        <!-- Javadoc that exists must be well formed. -->
+        <module name="JavadocStyle">
+            <property name="scope" value="public"/>
+            <property name="checkFirstSentence" value="true"/>
+            <property name="checkHtml" value="true"/>
+        </module>
+        <module name="NonEmptyAtclauseDescription"/>
+
+        <!-- ==================== Imports ==================== -->
+
+        <module name="UnusedImports">
+            <property name="processJavadoc" value="true"/>
+        </module>
+        <module name="RedundantImport"/>
+        <module name="AvoidStarImport"/>
+        <module name="IllegalImport"/>
+
+        <!-- ==================== Naming ==================== -->
+
+        <module name="PackageName"/>
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="StaticVariableName"/>
+        <module name="ClassTypeParameterName"/>
+        <module name="MethodTypeParameterName"/>
+
+        <!-- ==================== Likely mistakes ==================== -->
+
+        <module name="EqualsHashCode"/>
+        <module name="CovariantEquals"/>
+        <module name="StringLiteralEquality"/>
+        <module name="EmptyStatement"/>
+        <module name="FallThrough"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="NoFinalizer"/>
+        <module name="DefaultComesLast"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="OneStatementPerLine"/>
+        <module name="UnnecessarySemicolonInEnumeration"/>
+        <module name="UnnecessarySemicolonAfterTypeMemberDeclaration"/>
+
+        <!-- ==================== Structure ==================== -->
+
+        <module name="NeedBraces"/>
+        <module name="ModifierOrder"/>
+        <module name="RedundantModifier"/>
+        <module name="FinalClass"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="OneTopLevelClass"/>
+        <module name="ArrayTypeStyle"/>
+        <module name="UpperEll"/>
+        <module name="PackageDeclaration"/>
+        <module name="OuterTypeFilename"/>
+    </module>
+</module>

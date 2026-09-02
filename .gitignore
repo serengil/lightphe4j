@@ -1,0 +1,98 @@
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+### Gradle (in case a secondary build is added) ###
+.gradle/
+build/
+!src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.metadata/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.apt_generated_test/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+.recommenders/
+.loadpath
+.buildpath
+.target
+.texlipse
+
+### NetBeans ###
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+### VS Code ###
+.vscode/
+.history/
+*.vsix
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+### Linux ###
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+### LightPHE key material — never commit exported keys ###
+*.lphe
+*_secret.json
+*_public.json
+
+### Maven credentials must never be committed ###
+settings.xml
+settings-security.xml

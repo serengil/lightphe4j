@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    SpotBugs exclusions for lightphe4j. Each entry states why the pattern does
+    not apply here rather than simply silencing the analyser.
+-->
+<FindBugsFilter>
+
+    <!--
+        The curve tables are generated from the LightECC inventory. They are
+        large static arrays of decimal strings and carry no logic to analyse.
+    -->
+    <Match>
+        <Class name="~io\.github\.serengil\.lightphe\.ecc\.curves\..*Data"/>
+    </Match>
+
+    <!--
+        EI_EXPOSE_REP and friends flag accessors that hand back a reference to
+        internal state instead of a copy. That is deliberate here, and part of
+        the ported contract rather than an oversight:
+
+          * Keys.publicKey() and Keys.privateKey() return live maps because the
+            Python library's `keys` dictionary is mutable and callers are
+            expected to fill it in during key generation and to edit it when
+            constructing key material by hand. Both are documented as live
+            views, and Keys.deepCopy() is provided for callers who want to
+            mutate in isolation.
+          * cs() accessors return the cryptosystem itself, mirroring the Python
+            `cs.cs` attribute, so callers can reach the scheme-level API.
+          * Cryptosystems are immutable after construction: key material is
+            never written to again and every operation allocates its result, so
+            sharing the reference is safe.
+
+        Copying key material on every access would also mean copying multi
+        thousand bit integers on the hot path of every homomorphic operation.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,MS_EXPOSE_REP"/>
+    </Match>
+</FindBugsFilter>
