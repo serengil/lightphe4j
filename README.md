@@ -27,8 +27,7 @@ and somewhat homomorphic encryption schemes such as
 [`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/).
 
 It is a pure Java port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve
-arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in. It depends on nothing but
-SLF4J at runtime.
+arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in.
 
 Homomorphic encryption lets a party compute on ciphertexts without ever seeing the plaintexts or
 holding the private key. That is what makes it possible to offload work to a cloud you do not
