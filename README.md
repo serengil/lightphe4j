@@ -1,12 +1,9 @@
 # lightphe4j
 
 <div align="center">
-
-[![Tests](https://github.com/serengil/lightphe4j/actions/workflows/tests.yml/badge.svg)](https://github.com/serengil/lightphe4j/actions/workflows/tests.yml)
 [![Stars](https://img.shields.io/github/stars/serengil/lightphe4j?color=yellow&style=flat&label=%E2%AD%90%20stars)](https://github.com/serengil/lightphe4j/stargazers)
 [![License](http://img.shields.io/:license-MIT-green.svg?style=flat)](https://github.com/serengil/lightphe4j/blob/main/LICENSE)
 [![DOI](http://img.shields.io/:DOI-10.3390/sym18050832-blue.svg?style=flat)](https://www.mdpi.com/2073-8994/18/5/832)
-
 </div>
 
 `lightphe4j` is a lightweight homomorphic encryption library for Java supporting various partially
@@ -49,9 +46,11 @@ the logical decision.
 - 🧠 Well-suited for memory-constrained environments
 - ⚖️ Strikes a favorable balance for practical use cases
 
-## Installation
+## Installation [![Maven Central](https://img.shields.io/maven-central/v/io.github.serengil/lightphe4j.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.serengil/lightphe4j)
 
-Requires **Java 17 or newer**. Add the dependency to your `pom.xml`:
+Requires **Java 17 or newer**. 
+
+To install it via [maven](https://repo1.maven.org/maven2/io/github/serengil/lightphe4j/), add the dependency to your `pom.xml`:
 
 ```xml
 <dependency>
@@ -61,23 +60,11 @@ Requires **Java 17 or newer**. Add the dependency to your `pom.xml`:
 </dependency>
 ```
 
-Or with Gradle:
-
-```groovy
-implementation 'io.github.serengil:lightphe4j:0.0.25'
-```
-
 Then import the entry point:
 
 ```java
 import io.github.serengil.lightphe.LightPHE;
 ```
-
-`lightphe4j` logs through [SLF4J](https://www.slf4j.org/), so it uses whatever binding your
-application already provides. Without a binding, SLF4J stays silent. The
-`LIGHTPHE_LOG_LEVEL` environment variable acts as an additional floor, carrying the numeric levels
-of Python's `logging` module (`10` DEBUG, `20` INFO, `30` WARNING, `40` ERROR, `50` CRITICAL) and
-defaulting to INFO.
 
 ## Summary of homomorphic features of different cryptosystems
 
@@ -196,24 +183,6 @@ Ciphertext c3 = c1.multiply(c2);
 assert cs.decrypt(c3).equals(BigInteger.valueOf(m1 * m2));
 ```
 
-### Operator mapping
-
-Java has no operator overloading, so the Python operators become named methods:
-
-| Python | Java | Available on |
-| --- | --- | --- |
-| `c1 + c2` | `c1.add(c2)` | `Ciphertext`, `EncryptedTensor` |
-| `c1 * c2` | `c1.multiply(c2)` | `Ciphertext`, `EncryptedTensor` |
-| `c1 * k`, `k * c1` | `c1.multiply(k)` | `Ciphertext`, `EncryptedTensor` |
-| `c1 ^ c2` | `c1.xor(c2)` | `Ciphertext` |
-| `c1 & c2` | `c1.and(c2)` | `Ciphertext` |
-| `c1 @ t` | `c1.matmul(t)` | `EncryptedTensor` |
-
-Likewise, because Java dispatches on static types, the single Python `encrypt`/`decrypt` pair is
-split into `encrypt` / `decrypt` for scalars and `encryptTensor` / `decryptTensor` for vectors.
-Unsupported homomorphic operations throw `IllegalArgumentException`, mirroring the Python
-`ValueError`.
-
 ### Ciphertext regeneration
 
 Most homomorphic algorithms let you regenerate a ciphertext without breaking plaintext restoration.
@@ -231,8 +200,7 @@ assert cs.decrypt(c1).equals(BigInteger.valueOf(m1));
 
 ECC is a powerful public-key cryptosystem based on the algebraic structure of elliptic curves over
 finite fields. This library supports 3 elliptic curve forms — Weierstrass (default), Edwards and
-Koblitz — and 141 standard curve configurations, all ported from
-[LightECC](https://github.com/serengil/LightECC#supported-curves).
+Koblitz — and 100+ standard curve configurations.
 
 The [Elliptic Curve ElGamal](https://sefiks.com/2018/08/21/elliptic-curve-elgamal-encryption/)
 scheme is implemented, offering a secure and efficient homomorphic encryption option.
@@ -258,6 +226,8 @@ import io.github.serengil.lightphe.ecc.curves.CurveRegistry;
 
 List<String> edwardsCurves = CurveRegistry.listCurves(CurveForm.EDWARDS);
 ```
+
+See [`curves`](https://github.com/serengil/LightECC#supported-curves) page for a list of all supported forms, curves and their details.
 
 ### Vector embeddings
 
@@ -323,32 +293,6 @@ LightPHE cloud = LightPHE.builder()
 Building a cryptosystem from a supplied key pair validates it first: a missing `public_key` section
 or a missing required sub-field is rejected with an `IllegalArgumentException` naming exactly what
 is absent.
-
-## Notes on the port
-
-The port preserves the algorithms, key formats and error semantics of the Python implementation.
-Three differences follow from the target language rather than from a change in behaviour:
-
-- **Typed ciphertexts.** Python's `int | tuple | list | EllipticCurvePoint` payload becomes a sealed
-  `CipherValue` hierarchy (`IntValue`, `TupleValue`, `PointValue`, `Fp2Value`), so every
-  cryptosystem can exhaust the shapes a ciphertext can take without a catch-all branch.
-- **Typed key material.** The nested `keys` dictionary becomes `Keys` plus a sealed `KeyValue`
-  hierarchy (`Num`, `Point`, `Nested`). A `null` section means absent, which the validator reports
-  differently from a section that is present but incomplete.
-- **Tensor precision.** A tensor derived from another — by scaling, element-wise multiplication or a
-  dot product — keeps the precision of its source. The Python implementation resets it to the
-  default of 5 in those paths, which is invisible at the default precision but silently mis-scales a
-  cryptosystem built with a different one.
-
-Beyond the ported suite, this repository adds direct coverage for the Koblitz form over binary
-fields, which the Python tests skip to keep continuous integration fast.
-
-## Contributing
-
-All PRs are more than welcome! If you are planning to contribute a large patch, please create an
-issue first to get any upfront questions or design decisions out of the way.
-
-You should be able to run `make lint` and `make test` successfully before committing.
 
 ## Support
 

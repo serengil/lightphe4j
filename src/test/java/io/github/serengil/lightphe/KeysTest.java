@@ -16,6 +16,19 @@ class KeysTest {
 
     private static final List<String> MULTIPLICATIVE = List.of("RSA", "ElGamal");
 
+    /**
+     * ElGamal's message space is a single prime drawn below {@code 2^(keySize/2)}, so at the
+     * original 37 bits about 1.75% of key pairs cannot hold the 217 * 23 this test asserts. Only
+     * that family needs more room: the other schemes build their modulus from two primes, cap it by
+     * design, or do not multiply at all. Naccache-Stern in particular gets much slower as the key
+     * grows, so it stays at the original size.
+     */
+    private static final List<String> NEEDS_HEADROOM = List.of("ElGamal", "Exponential-ElGamal");
+
+    private static int keySizeFor(String algorithmName) {
+        return NEEDS_HEADROOM.contains(algorithmName) ? 64 : 37;
+    }
+
     @ParameterizedTest(name = "{0}")
     @ValueSource(
             strings = {
@@ -46,6 +59,22 @@ class KeysTest {
         long m1 = 217;
         long m2 = 23;
         long k = 3;
+
+        // Guard the precondition explicitly, so a future change fails with a clear reason. The
+        // bound depends on the branch taken below: the multiplicative schemes assert m1 * m2,
+        // Goldwasser-Micali works bit by bit and has no bound, and the rest assert m1 + m2 and
+        // k * m1. Benaloh in particular caps its message space at a prime below 2000 by design.
+        BigInteger required;
+        if (MULTIPLICATIVE.contains(algorithmName)) {
+            required = BigInteger.valueOf(m1 * m2);
+        } else if ("Goldwasser-Micali".equals(algorithmName)) {
+            required = BigInteger.ZERO;
+        } else {
+            required = BigInteger.valueOf(Math.max(m1 + m2, k * m1));
+        }
+        assertThat(cloudCs.cs().plaintextModulo())
+                .as("the message space must hold the values this test asserts")
+                .isGreaterThan(required);
 
         Ciphertext c1 = cloudCs.encrypt(m1);
         Ciphertext c2 = cloudCs.encrypt(m2);

@@ -115,12 +115,27 @@ make release-check
 
 This is `mvn clean verify -Prelease`: it builds, signs every artifact and stops short of
 uploading. You should be prompted for your GPG passphrase, and `target/` should end up with a
-`.asc` next to each `.jar` and `.pom`. Add `-Dgpg.keyname=<key id>` if you want a specific key.
+`.asc` next to each `.jar` and `.pom`.
+
+**Name the key explicitly.** Both of your secret keys carry the same user id
+(`Sefik Serengil <serengil@gmail.com>`) and no `default-key` is set in `~/.gnupg/gpg.conf`, so
+gpg's choice is ambiguous — and the signature must be made with the key you published to a
+keyserver, or Central validation fails:
+
+```shell
+make release-check GPG_KEY=9FAE35F001E030F089FA5DECE7900A29DAFC64B6
+```
+
+Alternatively, settle it once for every tool by adding to `~/.gnupg/gpg.conf`:
+
+```
+default-key 9FAE35F001E030F089FA5DECE7900A29DAFC64B6
+```
 
 ### 4. Upload
 
 ```shell
-make release
+make release GPG_KEY=9FAE35F001E030F089FA5DECE7900A29DAFC64B6
 ```
 
 This is `mvn clean deploy -Prelease`. It signs and uploads a *deployment* to the portal. Because
@@ -155,7 +170,9 @@ When it reads `VALIDATED`, click **Publish**.
 | `403 Forbidden` / namespace error | `io.github.serengil` is not verified, or the pom `groupId` does not sit under it |
 | Validation: *missing signature* | the `release` profile was not active — use `make release`, not `mvn deploy` |
 | Validation: *PGP key not found* | the key was never pushed to a keyserver, or propagation has not finished |
-| GPG hangs or fails headlessly | pass the passphrase explicitly: `./mvnw deploy -Prelease -Dgpg.passphrase=...` |
+| GPG hangs or fails headlessly | no terminal for the prompt; pass it explicitly: `make release GPG_KEY=... -Dgpg.passphrase=...` |
+| `gpg: skipped "": Invalid user ID` | an empty key name reached gpg — pass `GPG_KEY=<fingerprint>`, and do not set an empty `<keyname>` in the pom |
+| Validation: *signature from unknown key* | you signed with a different key than the one you published; check `GPG_KEY` matches the fingerprint you sent to the keyserver |
 | `-SNAPSHOT` rejected | Central only accepts release versions |
 
 ---

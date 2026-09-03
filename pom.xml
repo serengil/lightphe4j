@@ -51,8 +51,6 @@
         <spotbugs.version>4.8.6.6</spotbugs.version>
         <jacoco.version>0.8.12</jacoco.version>
 
-        <!-- Signing key for the release profile; override with -Dgpg.keyname=<key id>. -->
-        <gpg.keyname/>
         <assertj.version>3.27.3</assertj.version>
         <mockito.version>5.14.2</mockito.version>
     </properties>
@@ -144,7 +142,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.11.2</version>
+                <!--
+                    Pinned below 3.11.x: that series intermittently fails the
+                    release build with "Unable to compute stale date:
+                    target/reports/apidocs/packages" from its incremental-build
+                    staleness check. Reproduced at roughly 1 run in 3 here.
+                -->
+                <version>3.10.1</version>
                 <configuration>
                     <source>${maven.compiler.release}</source>
                     <doclint>none</doclint>
@@ -259,10 +263,12 @@
                         <version>3.2.7</version>
                         <configuration>
                             <!--
-                                Which secret key to sign with. Leave unset to use
-                                the default key, or pass -Dgpg.keyname=<key id>.
+                                The signing key is chosen with -Dgpg.keyname=<key id>,
+                                which maven-gpg-plugin reads natively; do not declare
+                                <keyname> here, because an unset property would expand
+                                to an empty string and gpg rejects that with
+                                "skipped: Invalid user ID".
                             -->
-                            <keyname>${gpg.keyname}</keyname>
                             <gpgArguments>
                                 <!--
                                     Lets the passphrase come from -Dgpg.passphrase
@@ -287,11 +293,17 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.7.0</version>
+                        <!--
+                            Keep reasonably current: the Portal adds fields to its
+                            API responses, and older plugin versions reject unknown
+                            ones outright (0.7.0 died on a new "warnings" field
+                            after a successful upload).
+                        -->
+                        <version>0.11.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
-                            <autoPublish>false</autoPublish>
+                            <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
                 </plugins>

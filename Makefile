@@ -15,6 +15,13 @@ ifeq ($(wildcard ./mvnw),)
 MVN := mvn
 endif
 
+# Which GPG key signs a release. Leave empty to use your gpg default key, or
+# name one explicitly when several secret keys share a user id:
+#
+#     make release-check GPG_KEY=<FINGERPRINT>
+GPG_KEY ?=
+GPG_ARGS := $(if $(strip $(GPG_KEY)),-Dgpg.keyname=$(strip $(GPG_KEY)),)
+
 # Resolved once, then handed to every Maven invocation. Empty when no suitable
 # JDK exists; the require-jdk guard below turns that into a readable error.
 JAVA_HOME := $(shell ./scripts/java-home.sh 2>/dev/null)
@@ -149,11 +156,11 @@ versions: require-jdk ## report dependency and plugin updates
 
 .PHONY: release-check
 release-check: require-jdk ## dry run of the release build: sign and package without uploading
-	$(MVN) clean verify -Prelease
+	$(MVN) clean verify -Prelease $(GPG_ARGS)
 
 .PHONY: release
 release: require-jdk ## sign and upload the artifacts to Maven Central
-	$(MVN) clean deploy -Prelease
+	$(MVN) clean deploy -Prelease $(GPG_ARGS)
 
 .PHONY: push-release
 push-release: release ## alias for release, mirroring scripts/push-release.sh in LightPHE
