@@ -293,6 +293,17 @@ Building a cryptosystem from a supplied key pair validates it first: a missing `
 or a missing required sub-field is rejected with an `IllegalArgumentException` naming exactly what
 is absent.
 
+## LightPHE Ecosystem
+
+`LightPHE` is available across multiple programming languages with consistent APIs and native performance for each ecosystem. Choose the port that fits your stack:
+
+| Language | Repository | Ecosystem Focus |
+| :--- | :--- | :--- |
+| **Python** | [`serengil/lightphe`](https://github.com/serengil/lightphe) | AI, Research & Prototyping |
+| **Go** | [`serengil/lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
+| **Java** | [`serengil/lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
+| **TypeScript** | [`serengil/lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
+
 ## Support
 
 There are many ways to support a project — starring ⭐️ the GitHub repo is just one 🙏
