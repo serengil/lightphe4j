@@ -85,8 +85,6 @@ import io.github.serengil.lightphe.LightPHE;
 | Sander-Young-Yung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ |
 
-1️⃣ Boneh-Goh-Nissim allows exactly one multiplication per ciphertext.
-
 ## Building a cryptosystem
 
 Building a cryptosystem generates a private and public key pair.
@@ -114,7 +112,7 @@ LightPHE cs = LightPHE.builder()
         .build();
 ```
 
-The builder carries every optional parameter of the Python constructor:
+The builder carries every optional parameter:
 
 | Builder method | Meaning |
 | --- | --- |
