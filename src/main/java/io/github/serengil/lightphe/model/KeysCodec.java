@@ -99,6 +99,15 @@ public final class KeysCodec {
             out.append(num.value());
         } else if (value instanceof KeyValue.Point point) {
             out.append('[').append(point.x()).append(", ").append(point.y()).append(']');
+        } else if (value instanceof KeyValue.Numbers numbers) {
+            out.append('[');
+            for (int i = 0; i < numbers.values().size(); i++) {
+                if (i > 0) {
+                    out.append(", ");
+                }
+                out.append(numbers.values().get(i));
+            }
+            out.append(']');
         } else if (value instanceof KeyValue.Nested nested) {
             writeSection(out, nested.entries());
         } else {
@@ -170,12 +179,18 @@ public final class KeysCodec {
             return new KeyValue.Num(number);
         }
         if (raw instanceof List<?> list) {
-            if (list.size() != 2
-                    || !(list.get(0) instanceof BigInteger x)
-                    || !(list.get(1) instanceof BigInteger y)) {
-                throw new IllegalArgumentException("a curve point needs exactly 2 coordinates");
+            List<BigInteger> values = new ArrayList<>(list.size());
+            for (Object item : list) {
+                if (!(item instanceof BigInteger number)) {
+                    throw new IllegalArgumentException("a key list must hold integers only");
+                }
+                values.add(number);
             }
-            return new KeyValue.Point(x, y);
+            // two integers are a curve point, any other length is a plain list
+            if (values.size() == 2) {
+                return new KeyValue.Point(values.get(0), values.get(1));
+            }
+            return new KeyValue.Numbers(values);
         }
         if (raw instanceof Map<?, ?> map) {
             Map<String, KeyValue> nested = new LinkedHashMap<>();

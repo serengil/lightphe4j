@@ -6,7 +6,7 @@
 
     <groupId>io.github.serengil</groupId>
     <artifactId>lightphe4j</artifactId>
-    <version>0.0.25</version>
+    <version>0.0.26</version>
     <packaging>jar</packaging>
 
     <name>lightphe4j</name>

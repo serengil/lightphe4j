@@ -42,7 +42,16 @@ public enum Algorithm {
     SANDER_YOUNG_YUNG("Sander-Young-Yung"),
 
     /** Additively homomorphic and, once per ciphertext, multiplicatively homomorphic. */
-    BONEH_GOH_NISSIM("Boneh-Goh-Nissim");
+    BONEH_GOH_NISSIM("Boneh-Goh-Nissim"),
+
+    /** Additively homomorphic over {@code Z_(2^k)}, generalising Goldwasser-Micali to k bits. */
+    JOYE_LIBERT("Joye-Libert"),
+
+    /** Additively homomorphic ElGamal-like scheme in class groups of quadratic fields. */
+    CASTAGNOS_LAGUILLAUMIE("Castagnos-Laguillaumie"),
+
+    /** Evaluates decision trees on encrypted input; additively homomorphic as Damgard-Jurik. */
+    ISHAI_PASKIN("Ishai-Paskin");
 
     private final String algorithmName;
 

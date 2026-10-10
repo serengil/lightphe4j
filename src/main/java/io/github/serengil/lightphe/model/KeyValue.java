@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -51,6 +52,25 @@ public sealed interface KeyValue {
         @Override
         public String toString() {
             return "(" + x + ", " + y + ")";
+        }
+    }
+
+    /**
+     * A list of integers other than a two-element curve point, e.g. a Castagnos-Laguillaumie binary
+     * quadratic form {@code [a, b, c]}.
+     *
+     * @param values the integers
+     */
+    record Numbers(List<BigInteger> values) implements KeyValue {
+
+        /** Creates an integer list key component, copying the values defensively. */
+        public Numbers {
+            values = List.copyOf(values);
+        }
+
+        @Override
+        public String toString() {
+            return values.toString();
         }
     }
 
@@ -158,6 +178,16 @@ public sealed interface KeyValue {
      */
     static KeyValue of(long value) {
         return new Num(BigInteger.valueOf(value));
+    }
+
+    /**
+     * Wraps a list of integers.
+     *
+     * @param values the integers
+     * @return the key component
+     */
+    static KeyValue numbers(List<BigInteger> values) {
+        return new Numbers(values);
     }
 
     /**

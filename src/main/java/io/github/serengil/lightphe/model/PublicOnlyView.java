@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
+import java.util.List;
 
 /**
  * A read-only view of a cryptosystem with its private key stripped.
@@ -108,6 +109,17 @@ public final class PublicOnlyView implements Homomorphic {
     @Override
     public CipherValue reencrypt(CipherValue ciphertext) {
         return delegate.reencrypt(ciphertext);
+    }
+
+    @Override
+    public List<List<BigInteger>> encryptDecisionTreeInput(List<Integer> bits, int depth) {
+        return delegate.encryptDecisionTreeInput(bits, depth);
+    }
+
+    @Override
+    public CipherValue evaluateDecisionTree(
+            DecisionTree tree, List<List<BigInteger>> encryptedInput) {
+        return delegate.evaluateDecisionTree(tree, encryptedInput);
     }
 
     @Override

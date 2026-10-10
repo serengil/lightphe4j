@@ -24,7 +24,8 @@ and somewhat homomorphic encryption schemes such as
 [`Naccache–Stern`](https://sefiks.com/2023/10/26/a-step-by-step-partially-homomorphic-encryption-example-with-naccache-stern-in-python/),
 [`Goldwasser–Micali`](https://sefiks.com/2023/10/27/a-step-by-step-partially-homomorphic-encryption-example-with-goldwasser-micali-in-python/),
 [`Sander-Young-Yung`](https://sefiks.com/2026/04/02/a-step-by-step-partially-homomorphic-sander-young-yung-example-in-python/) and
-[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/).
+[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
+`Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`.
 
 It is a pure Java port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve
 arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in. It depends on nothing but
@@ -58,7 +59,7 @@ To install it via [maven](https://repo1.maven.org/maven2/io/github/serengil/ligh
 <dependency>
     <groupId>io.github.serengil</groupId>
     <artifactId>lightphe4j</artifactId>
-    <version>0.0.25</version>
+    <version>0.0.26</version>
 </dependency>
 ```
 
@@ -70,20 +71,23 @@ import io.github.serengil.lightphe.LightPHE;
 
 ## Summary of homomorphic features of different cryptosystems
 
-| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext |
-| --- | --- | --- | --- | --- | --- | --- |
-| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Exponential ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Elliptic Curve ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Damgard-Jurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Naccache-Stern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Okamoto-Uchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Goldwasser-Micali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| Sander-Young-Yung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Exponential ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Elliptic Curve ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Damgard-Jurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Naccache-Stern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Okamoto-Uchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Joye-Libert | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Castagnos-Laguillaumie | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Ishai-Paskin | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Goldwasser-Micali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| Sander-Young-Yung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
 
 1️⃣ Boneh-Goh-Nissim allows exactly one multiplication per ciphertext.
 
@@ -107,6 +111,9 @@ String[] algorithms = {
     "EllipticCurve-ElGamal",
     "Sander-Young-Yung",
     "Boneh-Goh-Nissim",
+    "Joye-Libert",
+    "Castagnos-Laguillaumie",
+    "Ishai-Paskin",
 };
 
 LightPHE cs = LightPHE.builder()
@@ -230,6 +237,77 @@ List<String> edwardsCurves = CurveRegistry.listCurves(CurveForm.EDWARDS);
 ```
 
 See [`curves`](https://github.com/serengil/LightECC#supported-curves) page for a list of all supported forms, curves and their details.
+
+### Decision trees
+
+Ishai-Paskin solves a different problem than the algorithms above. Suppose a bank has a secret
+decision tree that decides a customer's credit limit, and a customer has private yes / no answers.
+The bank does not want to reveal its tree, and the customer does not want to reveal their answers.
+With Ishai-Paskin, the customer sends encrypted answers, the bank runs its tree on them without
+seeing them, and only the customer can decrypt the result. The customer learns the credit limit
+but not the rest of the tree.
+
+Let the bank's tree be the following, where questions are numbered 0, 1 and 2 and leaves are
+credit limits in thousand dollars.
+
+```
+                  Q0: has stable income?
+                 /no                    \yes
+     Q2: owns a house?              Q1: has existing debt?
+       /no        \yes               /no           \yes
+      0            5               20         Q2: owns a house?
+                                                /no       \yes
+                                               5          10
+```
+
+Each question is written as `node(question number, what to do if no, what to do if yes)`, and
+leaves are `leaf(value)`. So, the tree above becomes:
+
+```java
+import static io.github.serengil.lightphe.model.DecisionTree.leaf;
+import static io.github.serengil.lightphe.model.DecisionTree.node;
+
+import io.github.serengil.lightphe.model.DecisionTree;
+
+DecisionTree creditLimitTree =
+        node(0, node(2, leaf(0), leaf(5)), node(1, leaf(20), node(2, leaf(5), leaf(10))));
+```
+
+Then, the customer and the bank run the following steps.
+
+```java
+import java.math.BigInteger;
+import java.nio.file.Path;
+import java.util.List;
+
+// customer builds the cryptosystem and keeps the private key
+LightPHE customerCs = LightPHE.builder().algorithmName("Ishai-Paskin").build();
+
+// customer shares only the public key with the bank
+customerCs.exportKeys(Path.of("public.txt"), true);
+
+// customer's answers: stable income = yes, existing debt = yes, owns a house = no
+List<Integer> answers = List.of(1, 1, 0);
+
+// customer encrypts the answers and sends them to the bank. depth is the maximum
+// number of questions on a path of the tree, the bank should share this value
+List<List<BigInteger>> encryptedAnswers = customerCs.encryptDecisionTreeInput(answers, 3);
+
+// bank builds its own cryptosystem with the customer's public key
+LightPHE bankCs = LightPHE.builder()
+        .algorithmName("Ishai-Paskin")
+        .keyFile(Path.of("public.txt"))
+        .build();
+
+// bank runs its tree on encrypted answers and sends the result back to the customer
+Ciphertext encryptedLimit = bankCs.evaluateDecisionTree(creditLimitTree, encryptedAnswers);
+
+// customer decrypts the result - only the customer has the private key
+assert customerCs.decrypt(encryptedLimit).equals(BigInteger.valueOf(5));
+```
+
+The size of the result grows with the depth of the tree, not with the number of its nodes. Still,
+each extra level makes the computation noticeably slower, so this is practical for shallow trees.
 
 ### Vector embeddings
 

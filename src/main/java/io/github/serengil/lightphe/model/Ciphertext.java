@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.commons.PheUtils;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
+import io.github.serengil.lightphe.cryptosystems.JoyeLibert;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
 import java.util.Objects;
@@ -173,6 +174,9 @@ public final class Ciphertext {
      */
     public Ciphertext multiply(double constant) {
         requirePublicKey("homomorphic multiplication");
+        if (algorithmName == Algorithm.JOYE_LIBERT) {
+            throw new IllegalArgumentException(JoyeLibert.FLOAT_NOT_SUPPORTED_MSG);
+        }
         BigInteger normalized = PheUtils.normalizeInput(constant, cs.plaintextModulo());
         return new Ciphertext(cs, cs.multiplyByConstant(value, normalized));
     }

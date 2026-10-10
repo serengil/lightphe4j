@@ -16,11 +16,13 @@ import java.util.List;
  *
  * <p>The modulus is {@code n^(s+1)}; with {@code s == 1} the scheme degenerates to Paillier.
  *
+ * <p>{@link IshaiPaskin} extends it with Damgard-Jurik encryption at arbitrary levels.
+ *
  * <p>Ref: <a
  * href="https://sefiks.com/2023/10/20/a-step-by-step-partially-homomorphic-encryption-example-with-damgard-jurik-in-python/">
  * A step by step partially homomorphic encryption example with Damgard-Jurik</a>
  */
-public final class DamgardJurik extends AbstractHomomorphic {
+public class DamgardJurik extends AbstractHomomorphic {
 
     /** The key fields Damgard-Jurik requires. */
     public static final KeySpec REQUIRED_KEYS = KeySpec.of(List.of("g", "n", "s"), List.of("phi"));
@@ -38,9 +40,19 @@ public final class DamgardJurik extends AbstractHomomorphic {
      * @param keySize key size in bits; {@code null} defaults to 1024
      */
     public DamgardJurik(int s, Keys keys, Integer keySize) {
-        super(
-                Algorithm.DAMGARD_JURIK,
-                keys != null ? keys : generateKeys(keySize == null ? 1024 : keySize, s));
+        this(Algorithm.DAMGARD_JURIK, s, keys, keySize);
+    }
+
+    /**
+     * Builds a cryptosystem on Damgard-Jurik keys for a subclass reporting its own algorithm.
+     *
+     * @param algorithm the algorithm the subclass implements
+     * @param s the cryptosystem's modulus is {@code n^(s+1)}
+     * @param keys the private-public key pair; {@code null} generates a random pair
+     * @param keySize key size in bits; {@code null} defaults to 1024
+     */
+    protected DamgardJurik(Algorithm algorithm, int s, Keys keys, Integer keySize) {
+        super(algorithm, keys != null ? keys : generateKeys(keySize == null ? 1024 : keySize, s));
         BigInteger n = this.keys.publicNumber("n");
         this.plaintextModulo = n;
         this.ciphertextModulo = n.pow(this.keys.publicNumber("s").intValueExact() + 1);

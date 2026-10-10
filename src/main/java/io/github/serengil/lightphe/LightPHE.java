@@ -4,8 +4,10 @@ import io.github.serengil.lightphe.commons.KeyValidator;
 import io.github.serengil.lightphe.commons.Logger;
 import io.github.serengil.lightphe.commons.PheUtils;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
+import io.github.serengil.lightphe.cryptosystems.JoyeLibert;
 import io.github.serengil.lightphe.model.Algorithm;
 import io.github.serengil.lightphe.model.Ciphertext;
+import io.github.serengil.lightphe.model.DecisionTree;
 import io.github.serengil.lightphe.model.EncryptedTensor;
 import io.github.serengil.lightphe.model.Fraction;
 import io.github.serengil.lightphe.model.Homomorphic;
@@ -51,7 +53,7 @@ import lombok.Builder;
 public final class LightPHE {
 
     /** Library version, tracking the Python release this port is based on. */
-    public static final String VERSION = "0.0.25";
+    public static final String VERSION = "0.0.26";
 
     /** Default number of digits kept after the decimal point in tensor operations. */
     public static final int DEFAULT_PRECISION = 5;
@@ -72,7 +74,8 @@ public final class LightPHE {
      * @param algorithmName one of {@code RSA}, {@code ElGamal}, {@code Exponential-ElGamal}, {@code
      *     EllipticCurve-ElGamal}, {@code Paillier}, {@code Damgard-Jurik}, {@code
      *     Okamoto-Uchiyama}, {@code Benaloh}, {@code Naccache-Stern}, {@code Goldwasser-Micali},
-     *     {@code Sander-Young-Yung} or {@code Boneh-Goh-Nissim}
+     *     {@code Sander-Young-Yung}, {@code Boneh-Goh-Nissim}, {@code Joye-Libert}, {@code
+     *     Castagnos-Laguillaumie} or {@code Ishai-Paskin}
      * @param keys optional private-public key pair
      * @param keyFile if keys were exported already, the file to load them from
      * @param keySize key size in bits
@@ -88,8 +91,9 @@ public final class LightPHE {
      * @param plaintextLimit upper bound for plaintext values. Only used when {@code algorithmName}
      *     is {@code Benaloh} or {@code Sander-Young-Yung}.
      * @param maxTries maximum attempts to generate keys; zero or less selects the default of 10000.
-     *     RSA, Benaloh, Naccache-Stern, Goldwasser-Micali and Boneh-Goh-Nissim need multiple
-     *     attempts to generate valid keys, and the other algorithms discard it.
+     *     RSA, Benaloh, Naccache-Stern, Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert and
+     *     Castagnos-Laguillaumie need multiple attempts to generate valid keys, and the other
+     *     algorithms discard it.
      */
     @Builder
     public LightPHE(
@@ -193,6 +197,9 @@ public final class LightPHE {
      */
     public Ciphertext encrypt(double plaintext) {
         requirePublicKey("encryption");
+        if (algorithmName == Algorithm.JOYE_LIBERT) {
+            throw new IllegalArgumentException(JoyeLibert.FLOAT_NOT_SUPPORTED_MSG);
+        }
         CipherValue ciphertext =
                 cs.encrypt(PheUtils.normalizeInput(plaintext, cs.plaintextModulo()));
         return buildCiphertext(ciphertext);
@@ -267,6 +274,41 @@ public final class LightPHE {
             plainTensor.add(restored.doubleValue());
         }
         return plainTensor;
+    }
+
+    // -----------------------------------------------------------------------
+    // Decision trees
+    // -----------------------------------------------------------------------
+
+    /**
+     * Encrypts the input bits (answers to the questions) of a decision tree. Only supported by
+     * Ishai-Paskin.
+     *
+     * @param bits the input bits, each 0 or 1
+     * @param depth the maximum number of decisions on a path of the decision tree
+     * @return the encrypted input, to be sent to the tree owner
+     * @throws IllegalArgumentException when no public key is available, or when the scheme does not
+     *     support decision trees
+     */
+    public List<List<BigInteger>> encryptDecisionTreeInput(List<Integer> bits, int depth) {
+        requirePublicKey("encryption");
+        return cs.encryptDecisionTreeInput(bits, depth);
+    }
+
+    /**
+     * Evaluates a decision tree on encrypted input. Private key is not required. Only supported by
+     * Ishai-Paskin.
+     *
+     * @param tree the decision tree
+     * @param encryptedInput the output of {@link #encryptDecisionTreeInput}
+     * @return the encrypted output of the tree
+     * @throws IllegalArgumentException when no public key is available, or when the scheme does not
+     *     support decision trees
+     */
+    public Ciphertext evaluateDecisionTree(
+            DecisionTree tree, List<List<BigInteger>> encryptedInput) {
+        requirePublicKey("decision tree evaluation");
+        return buildCiphertext(cs.evaluateDecisionTree(tree, encryptedInput));
     }
 
     // -----------------------------------------------------------------------
