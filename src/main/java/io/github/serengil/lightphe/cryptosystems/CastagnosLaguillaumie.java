@@ -386,9 +386,9 @@ public final class CastagnosLaguillaumie extends AbstractHomomorphic {
             y1 = BigInteger.ZERO;
             d = a1;
         } else {
-            BigInteger[] gcd = xgcd(a2, a1);
-            d = gcd[0];
-            y1 = gcd[1];
+            // y1 a2 = d mod a1, so y1 is the inverse of a2/d modulo a1/d
+            d = a2.gcd(a1);
+            y1 = a2.divide(d).modInverse(a1.divide(d));
         }
 
         BigInteger x2;
@@ -399,10 +399,10 @@ public final class CastagnosLaguillaumie extends AbstractHomomorphic {
             x2 = BigInteger.ZERO;
             d1 = d;
         } else {
-            BigInteger[] gcd = xgcd(s, d);
-            d1 = gcd[0];
-            x2 = gcd[1];
-            y2 = gcd[2].negate();
+            // x2 s - y2 d = d1, so x2 is the inverse of s/d1 modulo d/d1
+            d1 = s.gcd(d);
+            x2 = s.divide(d1).modInverse(d.divide(d1));
+            y2 = x2.multiply(s).subtract(d1).divide(d);
         }
 
         BigInteger v1 = a1.divide(d1);
@@ -426,33 +426,6 @@ public final class CastagnosLaguillaumie extends AbstractHomomorphic {
             e = e.shiftRight(1);
         }
         return result;
-    }
-
-    /**
-     * Extended euclidean algorithm with floor division, matching the Python reference.
-     *
-     * @return {@code [d, u, v]} such that {@code u a + v b = d = gcd(a, b)}
-     */
-    private static BigInteger[] xgcd(BigInteger a, BigInteger b) {
-        BigInteger x = a;
-        BigInteger y = b;
-        BigInteger u0 = BigInteger.ONE;
-        BigInteger u1 = BigInteger.ZERO;
-        BigInteger v0 = BigInteger.ZERO;
-        BigInteger v1 = BigInteger.ONE;
-        while (y.signum() != 0) {
-            BigInteger quotient = floorDiv(x, y);
-            BigInteger nextY = x.subtract(quotient.multiply(y));
-            x = y;
-            y = nextY;
-            BigInteger nextU = u0.subtract(quotient.multiply(u1));
-            u0 = u1;
-            u1 = nextU;
-            BigInteger nextV = v0.subtract(quotient.multiply(v1));
-            v0 = v1;
-            v1 = nextV;
-        }
-        return new BigInteger[] {x, u0, v0};
     }
 
     /** Division rounding towards negative infinity, like Python's {@code //}. */
