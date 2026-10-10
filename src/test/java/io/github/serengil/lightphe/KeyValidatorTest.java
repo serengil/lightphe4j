@@ -30,6 +30,9 @@ class KeyValidatorTest {
         "Goldwasser-Micali, 50",
         "Sander-Young-Yung, 50",
         "Boneh-Goh-Nissim, 50",
+        "Joye-Libert, 50",
+        "Castagnos-Laguillaumie, 50",
+        "Ishai-Paskin, 50",
     })
     @DisplayName("Dropping a required public_key sub-field is rejected")
     void testMissingPublicKeyFieldIsRejected(String algorithmName, int keySize) {
@@ -66,6 +69,9 @@ class KeyValidatorTest {
         "Goldwasser-Micali, 50",
         "Sander-Young-Yung, 50",
         "Boneh-Goh-Nissim, 50",
+        "Joye-Libert, 50",
+        "Castagnos-Laguillaumie, 50",
+        "Ishai-Paskin, 50",
     })
     @DisplayName("Dropping a required private_key sub-field is rejected")
     void testMissingPrivateKeyFieldIsRejected(String algorithmName, int keySize) {

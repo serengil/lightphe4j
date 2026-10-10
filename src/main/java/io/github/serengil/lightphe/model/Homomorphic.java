@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
+import java.util.List;
 
 /**
  * The contract every cryptosystem in this library fulfils.
@@ -155,6 +156,33 @@ public interface Homomorphic {
      */
     default CipherValue reencrypt(CipherValue ciphertext) {
         throw new IllegalArgumentException(algorithm() + " does not support re-encryption");
+    }
+
+    /**
+     * Encrypts the input bits of a decision tree, for trees up to the given depth.
+     *
+     * @param bits the input bits, each 0 or 1
+     * @param depth the maximum number of decisions on a path of the tree
+     * @return item {@code [i][s - 1]} is the encryption of bit {@code i} at level {@code s}
+     * @throws IllegalArgumentException when the scheme does not support decision trees
+     */
+    default List<List<BigInteger>> encryptDecisionTreeInput(List<Integer> bits, int depth) {
+        throw new IllegalArgumentException(
+                algorithm() + " does not support evaluating decision trees");
+    }
+
+    /**
+     * Evaluates a decision tree on encrypted input bits.
+     *
+     * @param tree the decision tree
+     * @param encryptedInput the output of {@link #encryptDecisionTreeInput}
+     * @return the encrypted output of the tree
+     * @throws IllegalArgumentException when the scheme does not support decision trees
+     */
+    default CipherValue evaluateDecisionTree(
+            DecisionTree tree, List<List<BigInteger>> encryptedInput) {
+        throw new IllegalArgumentException(
+                algorithm() + " does not support evaluating decision trees");
     }
 
     /**

@@ -36,8 +36,8 @@ public final class CryptosystemFactory {
      * @param plaintextLimit upper bound for plaintext values, only used by Benaloh and
      *     Sander-Young-Yung
      * @param maxTries maximum attempts to generate keys; RSA, Benaloh, Naccache-Stern,
-     *     Goldwasser-Micali and Boneh-Goh-Nissim need multiple attempts, and the other algorithms
-     *     ignore it
+     *     Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert and Castagnos-Laguillaumie need multiple
+     *     attempts, and the other algorithms ignore it
      */
     public record Options(
             Keys keys,
@@ -98,6 +98,9 @@ public final class CryptosystemFactory {
             case SANDER_YOUNG_YUNG ->
                     new SanderYoungYung(keys, keySize, toIntOrNull(options.plaintextLimit()));
             case BONEH_GOH_NISSIM -> new BonehGohNissim(keys, keySize, maxTries);
+            case JOYE_LIBERT -> new JoyeLibert(keys, keySize, maxTries);
+            case CASTAGNOS_LAGUILLAUMIE -> new CastagnosLaguillaumie(keys, keySize, maxTries);
+            case ISHAI_PASKIN -> new IshaiPaskin(keys, keySize);
         };
     }
 
@@ -122,6 +125,9 @@ public final class CryptosystemFactory {
             case GOLDWASSER_MICALI -> GoldwasserMicali.REQUIRED_KEYS;
             case SANDER_YOUNG_YUNG -> SanderYoungYung.REQUIRED_KEYS;
             case BONEH_GOH_NISSIM -> BonehGohNissim.REQUIRED_KEYS;
+            case JOYE_LIBERT -> JoyeLibert.REQUIRED_KEYS;
+            case CASTAGNOS_LAGUILLAUMIE -> CastagnosLaguillaumie.REQUIRED_KEYS;
+            case ISHAI_PASKIN -> DamgardJurik.REQUIRED_KEYS;
         };
     }
 

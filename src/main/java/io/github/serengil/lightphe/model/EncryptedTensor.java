@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.commons.Logger;
 import io.github.serengil.lightphe.commons.PheUtils;
+import io.github.serengil.lightphe.cryptosystems.JoyeLibert;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -232,6 +233,9 @@ public final class EncryptedTensor {
      * @return the scaled tensor
      */
     public EncryptedTensor multiply(double constant) {
+        if (cs.algorithm() == Algorithm.JOYE_LIBERT) {
+            throw new IllegalArgumentException(JoyeLibert.FLOAT_NOT_SUPPORTED_MSG);
+        }
         int constantSign = constant >= 0 ? 1 : -1;
         BigInteger normalized = PheUtils.normalizeInput(Math.abs(constant), cs.plaintextModulo());
         return scale(normalized, constantSign);

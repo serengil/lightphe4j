@@ -2,6 +2,7 @@ package io.github.serengil.lightphe.model;
 
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -186,6 +187,22 @@ public final class Keys {
             throw new IllegalArgumentException("private_key is not available");
         }
         return number(privateKey, PRIVATE_KEY, field);
+    }
+
+    /**
+     * Returns a public key field as a list of integers.
+     *
+     * @param field the field name
+     * @return the integers
+     * @throws IllegalArgumentException when the field is absent or is not a list of integers
+     */
+    public List<BigInteger> publicNumbers(String field) {
+        KeyValue value = publicKey == null ? null : publicKey.get(field);
+        if (!(value instanceof KeyValue.Numbers numbers)) {
+            throw new IllegalArgumentException(
+                    PUBLIC_KEY + "." + field + " is not an integer list");
+        }
+        return numbers.values();
     }
 
     /**

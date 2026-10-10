@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 import io.github.serengil.lightphe.ecc.curves.CurveForm;
 import io.github.serengil.lightphe.ecc.curves.CurveRegistry;
 import io.github.serengil.lightphe.model.Ciphertext;
+import io.github.serengil.lightphe.model.DecisionTree;
 import io.github.serengil.lightphe.model.EncryptedTensor;
 import java.math.BigInteger;
 import java.nio.file.Path;
@@ -126,6 +127,34 @@ class ReadmeExamplesTest {
             expectedDot += t1.get(i).doubleValue() * t3.get(i).doubleValue();
         }
         assertThat(cs.decryptTensor(c7).get(0)).isCloseTo(expectedDot, within(0.1));
+    }
+
+    @Test
+    @DisplayName("README: decision trees")
+    void decisionTrees(@TempDir Path tempDir) {
+        DecisionTree creditLimitTree =
+                DecisionTree.node(
+                        0,
+                        DecisionTree.node(2, DecisionTree.leaf(0), DecisionTree.leaf(5)),
+                        DecisionTree.node(
+                                1,
+                                DecisionTree.leaf(20),
+                                DecisionTree.node(2, DecisionTree.leaf(5), DecisionTree.leaf(10))));
+
+        LightPHE customerCs = LightPHE.builder().algorithmName("Ishai-Paskin").keySize(50).build();
+
+        Path publicKeyFile = tempDir.resolve("public.txt");
+        customerCs.exportKeys(publicKeyFile, true);
+
+        List<Integer> answers = List.of(1, 1, 0);
+        List<List<BigInteger>> encryptedAnswers = customerCs.encryptDecisionTreeInput(answers, 3);
+
+        LightPHE bankCs =
+                LightPHE.builder().algorithmName("Ishai-Paskin").keyFile(publicKeyFile).build();
+
+        Ciphertext encryptedLimit = bankCs.evaluateDecisionTree(creditLimitTree, encryptedAnswers);
+
+        assertThat(customerCs.decrypt(encryptedLimit)).isEqualTo(BigInteger.valueOf(5));
     }
 
     @Test

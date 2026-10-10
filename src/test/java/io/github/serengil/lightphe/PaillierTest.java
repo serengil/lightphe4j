@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import io.github.serengil.lightphe.model.Ciphertext;
+import io.github.serengil.lightphe.model.DecisionTree;
 import java.math.BigInteger;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +40,18 @@ class PaillierTest {
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.multiply(c2));
 
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.xor(c2));
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> cs.encryptDecisionTreeInput(List.of(1), 1))
+                .withMessageContaining("does not support evaluating decision trees");
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(
+                        () ->
+                                cs.evaluateDecisionTree(
+                                        DecisionTree.node(
+                                                0, DecisionTree.leaf(0), DecisionTree.leaf(1)),
+                                        List.of(List.of(BigInteger.ONE))))
+                .withMessageContaining("does not support evaluating decision trees");
     }
 
     @Test
