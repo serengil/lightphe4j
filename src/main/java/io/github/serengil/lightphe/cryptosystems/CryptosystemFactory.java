@@ -31,12 +31,14 @@ public final class CryptosystemFactory {
      *
      * @param keys an existing private-public key pair, or {@code null} to generate one
      * @param keySize key size in bits, or {@code null} for the algorithm's default
-     * @param form elliptic curve form, only used by elliptic curve ElGamal
-     * @param curve elliptic curve name, only used by elliptic curve ElGamal
-     * @param plaintextLimit upper bound for plaintext values, only used by Benaloh and
-     *     Sander-Young-Yung
+     * @param form elliptic curve form, only used by elliptic curve ElGamal and Camenisch-Shoup
+     * @param curve elliptic curve name, only used by elliptic curve ElGamal and Camenisch-Shoup
+     * @param plaintextLimit upper bound for plaintext values, only used by Benaloh,
+     *     Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim and
+     *     Gentry-Halevi-Vaikuntanathan
      * @param maxTries maximum attempts to generate keys; RSA, Benaloh, Naccache-Stern,
-     *     Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert and Castagnos-Laguillaumie need multiple
+     *     Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert, Castagnos-Laguillaumie,
+     *     Damgard-Geisler-Kroigaard, Bresson-Catalano-Pointcheval and Camenisch-Shoup need multiple
      *     attempts, and the other algorithms ignore it
      */
     public record Options(
@@ -101,6 +103,19 @@ public final class CryptosystemFactory {
             case JOYE_LIBERT -> new JoyeLibert(keys, keySize, maxTries);
             case CASTAGNOS_LAGUILLAUMIE -> new CastagnosLaguillaumie(keys, keySize, maxTries);
             case ISHAI_PASKIN -> new IshaiPaskin(keys, keySize);
+            case DAMGARD_GEISLER_KROIGAARD -> new DamgardGeislerKroigaard(keys, keySize, maxTries);
+            case BRESSON_CATALANO_POINTCHEVAL ->
+                    new BressonCatalanoPointcheval(keys, keySize, maxTries);
+            case CAMENISCH_SHOUP ->
+                    new CamenischShoup(keys, keySize, maxTries, options.form(), options.curve());
+            case ELLIPTIC_CURVE_PAILLIER -> new EllipticCurvePaillier(keys, keySize);
+            case REGEV -> new Regev(keys, keySize, options.plaintextLimit());
+            case BRAKERSKI_VAIKUNTANATHAN ->
+                    new BrakerskiVaikuntanathan(keys, keySize, options.plaintextLimit());
+            case FREEMAN_BONEH_GOH_NISSIM ->
+                    new FreemanBonehGohNissim(keys, keySize, options.plaintextLimit());
+            case GENTRY_HALEVI_VAIKUNTANATHAN ->
+                    new GentryHaleviVaikuntanathan(keys, keySize, options.plaintextLimit());
         };
     }
 
@@ -128,7 +143,55 @@ public final class CryptosystemFactory {
             case JOYE_LIBERT -> JoyeLibert.REQUIRED_KEYS;
             case CASTAGNOS_LAGUILLAUMIE -> CastagnosLaguillaumie.REQUIRED_KEYS;
             case ISHAI_PASKIN -> DamgardJurik.REQUIRED_KEYS;
+            case DAMGARD_GEISLER_KROIGAARD -> DamgardGeislerKroigaard.REQUIRED_KEYS;
+            case BRESSON_CATALANO_POINTCHEVAL -> BressonCatalanoPointcheval.REQUIRED_KEYS;
+            case CAMENISCH_SHOUP -> CamenischShoup.REQUIRED_KEYS;
+            case ELLIPTIC_CURVE_PAILLIER -> EllipticCurvePaillier.REQUIRED_KEYS;
+            case REGEV -> Regev.REQUIRED_KEYS;
+            case BRAKERSKI_VAIKUNTANATHAN -> BrakerskiVaikuntanathan.REQUIRED_KEYS;
+            case FREEMAN_BONEH_GOH_NISSIM -> FreemanBonehGohNissim.REQUIRED_KEYS;
+            case GENTRY_HALEVI_VAIKUNTANATHAN -> GentryHaleviVaikuntanathan.REQUIRED_KEYS;
         };
+    }
+
+    /**
+     * Rejects real numbers for the algorithms that support integers only.
+     *
+     * <p>Joye-Libert cannot invert powers of 10 in its plaintext space, and the lattice and
+     * discrete logarithm based schemes cannot fit values scaled by powers of 10 into their small
+     * plaintext space or noise budget.
+     *
+     * @param algorithm the algorithm
+     * @throws IllegalArgumentException when the algorithm does not support floats
+     */
+    public static void requireFloatSupport(Algorithm algorithm) {
+        if (algorithm == Algorithm.JOYE_LIBERT) {
+            throw new IllegalArgumentException(JoyeLibert.FLOAT_NOT_SUPPORTED_MSG);
+        }
+        requireTensorSupport(algorithm);
+    }
+
+    /**
+     * Rejects tensors for the algorithms whose plaintext space or noise budget cannot hold values
+     * scaled by powers of 10, even when the tensor items are integers.
+     *
+     * @param algorithm the algorithm
+     * @throws IllegalArgumentException when the algorithm does not support tensors
+     */
+    public static void requireTensorSupport(Algorithm algorithm) {
+        String message =
+                switch (algorithm) {
+                    case REGEV -> Regev.FLOAT_NOT_SUPPORTED_MSG;
+                    case BRAKERSKI_VAIKUNTANATHAN ->
+                            BrakerskiVaikuntanathan.FLOAT_NOT_SUPPORTED_MSG;
+                    case FREEMAN_BONEH_GOH_NISSIM -> FreemanBonehGohNissim.FLOAT_NOT_SUPPORTED_MSG;
+                    case GENTRY_HALEVI_VAIKUNTANATHAN ->
+                            GentryHaleviVaikuntanathan.FLOAT_NOT_SUPPORTED_MSG;
+                    default -> null;
+                };
+        if (message != null) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     private static Integer toIntOrNull(BigInteger value) {

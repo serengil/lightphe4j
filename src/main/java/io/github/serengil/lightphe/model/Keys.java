@@ -197,12 +197,40 @@ public final class Keys {
      * @throws IllegalArgumentException when the field is absent or is not a list of integers
      */
     public List<BigInteger> publicNumbers(String field) {
-        KeyValue value = publicKey == null ? null : publicKey.get(field);
-        if (!(value instanceof KeyValue.Numbers numbers)) {
-            throw new IllegalArgumentException(
-                    PUBLIC_KEY + "." + field + " is not an integer list");
-        }
-        return numbers.values();
+        return numbers(publicKey, PUBLIC_KEY, field);
+    }
+
+    /**
+     * Returns a private key field as a list of integers.
+     *
+     * @param field the field name
+     * @return the integers
+     * @throws IllegalArgumentException when the field is absent or is not a list of integers
+     */
+    public List<BigInteger> privateNumbers(String field) {
+        return numbers(privateKey, PRIVATE_KEY, field);
+    }
+
+    /**
+     * Returns a public key field as a list of integer lists.
+     *
+     * @param field the field name
+     * @return the rows
+     * @throws IllegalArgumentException when the field is absent or is not a matrix
+     */
+    public List<List<BigInteger>> publicMatrix(String field) {
+        return matrix(publicKey, PUBLIC_KEY, field);
+    }
+
+    /**
+     * Returns a private key field as a list of integer lists.
+     *
+     * @param field the field name
+     * @return the rows
+     * @throws IllegalArgumentException when the field is absent or is not a matrix
+     */
+    public List<List<BigInteger>> privateMatrix(String field) {
+        return matrix(privateKey, PRIVATE_KEY, field);
     }
 
     /**
@@ -234,6 +262,28 @@ public final class Keys {
                     PUBLIC_KEY + "." + field + " is not a nested dictionary");
         }
         return nested;
+    }
+
+    private static List<BigInteger> numbers(
+            Map<String, KeyValue> section, String name, String field) {
+        KeyValue value = section == null ? null : section.get(field);
+        if (value instanceof KeyValue.Numbers numbers) {
+            return numbers.values();
+        }
+        // a two-element list cannot be told apart from a curve point in exported JSON
+        if (value instanceof KeyValue.Point point) {
+            return List.of(point.x(), point.y());
+        }
+        throw new IllegalArgumentException(name + "." + field + " is not an integer list");
+    }
+
+    private static List<List<BigInteger>> matrix(
+            Map<String, KeyValue> section, String name, String field) {
+        KeyValue value = section == null ? null : section.get(field);
+        if (!(value instanceof KeyValue.Matrix matrix)) {
+            throw new IllegalArgumentException(name + "." + field + " is not a matrix");
+        }
+        return matrix.rows();
     }
 
     private static BigInteger number(Map<String, KeyValue> section, String name, String field) {

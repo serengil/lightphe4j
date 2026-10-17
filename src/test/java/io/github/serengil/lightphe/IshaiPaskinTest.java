@@ -101,17 +101,52 @@ class IshaiPaskinTest {
     @Test
     @DisplayName("Ishai-Paskin evaluates boolean decision trees")
     void testBooleanTrees() {
+        // xi? asks the i-th input bit. left branch is taken if it is 0, right branch if it is 1.
+
+        //        x0?
+        //      /0   \1
+        //     x1?    1
+        //   /0   \1
+        //  0      1
         assertTree(node(0, node(1, leaf(0), leaf(1)), leaf(1)), 2, 0); // x0 OR x1
+
+        //     x0?
+        //   /0   \1
+        //  0     x1?
+        //      /0   \1
+        //     0      1
         assertTree(node(0, leaf(0), node(1, leaf(0), leaf(1))), 2, 0); // x0 AND x1
+
+        //     x1?
+        //   /0   \1
+        //  1      0
         assertTree(node(1, leaf(1), leaf(0)), 2, 0); // NOT x1
 
-        // shared sub trees (DAG) are evaluated once
+        // shared sub trees (DAG) are evaluated once. x2? nodes below are only two objects,
+        // x2Is1 (0, 1 leaves) and x2Is0 (1, 0 leaves), each referenced twice.
+        //
+        //                    x0?
+        //           /0                 \1
+        //         x1?                   x1?
+        //       /0     \1             /0     \1
+        //     x2?       x2?         x2?       x2?
+        //    /0  \1    /0  \1      /0  \1    /0  \1
+        //   0     1   1     0     1     0   0     1
         DecisionTree x2Is0 = node(2, leaf(1), leaf(0));
         DecisionTree x2Is1 = node(2, leaf(0), leaf(1));
         DecisionTree x1XorX2 = node(1, x2Is1, x2Is0);
         DecisionTree x1XnorX2 = node(1, x2Is0, x2Is1);
         assertTree(node(0, x1XorX2, x1XnorX2), 3, 0);
 
+        // majority vote of x0, x1 and x2
+        //
+        //                x0?
+        //          /0           \1
+        //        x1?             x1?
+        //      /0   \1         /0   \1
+        //     0     x2?       x2?    1
+        //         /0   \1   /0   \1
+        //        0      1  0      1
         DecisionTree majority =
                 node(
                         0,
@@ -124,6 +159,14 @@ class IshaiPaskinTest {
     @DisplayName("Ishai-Paskin evaluates decision trees with non-binary leaves")
     void testDecisionTreeWithNonBinaryLeaves() {
         // leaves at different depths returning class labels
+        //
+        //             x0?
+        //          /0     \1
+        //        x1?       40
+        //      /0   \1
+        //     10    x2?
+        //         /0   \1
+        //        20     30
         DecisionTree decisionTree =
                 node(0, node(1, leaf(10), node(2, leaf(20), leaf(30))), leaf(40));
         assertTree(decisionTree, 3, 0);
@@ -138,6 +181,13 @@ class IshaiPaskinTest {
     @Test
     @DisplayName("Ishai-Paskin re-randomizes the output")
     void testOutputIsRerandomized() {
+        // x0 or x1
+        //
+        //        x0?
+        //      /0   \1
+        //     x1?    1
+        //   /0   \1
+        //  0      1
         DecisionTree tree = node(0, node(1, leaf(0), leaf(1)), leaf(1));
         List<List<BigInteger>> encryptedInput = cs.encryptDecisionTreeInput(List.of(1, 0), 2);
         Ciphertext output1 = cs.evaluateDecisionTree(tree, encryptedInput);
@@ -156,8 +206,15 @@ class IshaiPaskinTest {
     @Test
     @DisplayName("Ishai-Paskin runs the credit limit example in the readme")
     void testCreditLimitExampleInReadme(@TempDir Path tempDir) {
-        // bank's secret tree: Q0 = has stable income?, Q1 = has existing debt?,
-        // Q2 = owns a house?, leaves are credit limits in thousand dollars
+        // bank's secret tree drawn in the readme. leaves are credit limits in thousand dollars.
+        //
+        //                   Q0: has stable income?
+        //                  /no                    \yes
+        //      Q2: owns a house?              Q1: has existing debt?
+        //        /no        \yes               /no           \yes
+        //       0            5               20         Q2: owns a house?
+        //                                                 /no       \yes
+        //                                                5          10
         DecisionTree creditLimitTree =
                 node(0, node(2, leaf(0), leaf(5)), node(1, leaf(20), node(2, leaf(5), leaf(10))));
 
@@ -251,6 +308,7 @@ class IshaiPaskinTest {
     @DisplayName("Ishai-Paskin works with 1024-bit keys")
     void testLargeKeys() {
         LightPHE largeCs = LightPHE.builder().algorithmName("Ishai-Paskin").keySize(1024).build();
+        // majority vote of x0, x1 and x2, drawn in testBooleanTrees
         DecisionTree majority =
                 node(
                         0,

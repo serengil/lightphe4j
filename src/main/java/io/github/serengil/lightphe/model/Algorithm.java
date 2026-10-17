@@ -51,7 +51,31 @@ public enum Algorithm {
     CASTAGNOS_LAGUILLAUMIE("Castagnos-Laguillaumie"),
 
     /** Evaluates decision trees on encrypted input; additively homomorphic as Damgard-Jurik. */
-    ISHAI_PASKIN("Ishai-Paskin");
+    ISHAI_PASKIN("Ishai-Paskin"),
+
+    /** Additively homomorphic over a small prime; underlies secure comparison and argmax. */
+    DAMGARD_GEISLER_KROIGAARD("Damgard-Geisler-Kroigaard"),
+
+    /** Additively homomorphic ElGamal-like scheme with a master key decrypting every user. */
+    BRESSON_CATALANO_POINTCHEVAL("Bresson-Catalano-Pointcheval"),
+
+    /** Additively homomorphic; supports verifiable encryption of discrete logarithms. */
+    CAMENISCH_SHOUP("Camenisch-Shoup"),
+
+    /** Elliptic curve analogue of Paillier over the ring {@code Z_(n^2)}. */
+    ELLIPTIC_CURVE_PAILLIER("EllipticCurve-Paillier"),
+
+    /** Additively homomorphic and quantum resistant, built on learning with errors. */
+    REGEV("Regev"),
+
+    /** Quantum resistant, built on ring learning with errors; supports one multiplication. */
+    BRAKERSKI_VAIKUNTANATHAN("Brakerski-Vaikuntanathan"),
+
+    /** Prime order version of Boneh-Goh-Nissim; supports one multiplication. */
+    FREEMAN_BONEH_GOH_NISSIM("Freeman-Boneh-Goh-Nissim"),
+
+    /** BGN-type scheme from learning with errors; for learning purposes only. */
+    GENTRY_HALEVI_VAIKUNTANATHAN("Gentry-Halevi-Vaikuntanathan");
 
     private final String algorithmName;
 

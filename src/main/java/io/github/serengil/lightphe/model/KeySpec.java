@@ -13,9 +13,14 @@ import java.util.Map;
  * @param privateKey required sub-fields of the {@code private_key} section
  * @param nested maps a {@code public_key} sub-field that itself holds a dictionary to that
  *     dictionary's required sub-fields
+ * @param alternativePrivateKey sub-fields accepted in the {@code private_key} section instead of
+ *     the required ones, or an empty list when there is no alternative
  */
 public record KeySpec(
-        List<String> publicKey, List<String> privateKey, Map<String, List<String>> nested) {
+        List<String> publicKey,
+        List<String> privateKey,
+        Map<String, List<String>> nested,
+        List<String> alternativePrivateKey) {
 
     /**
      * Creates a key specification, copying the supplied collections.
@@ -23,11 +28,13 @@ public record KeySpec(
      * @param publicKey required public key fields
      * @param privateKey required private key fields
      * @param nested required nested fields
+     * @param alternativePrivateKey private key fields accepted instead of the required ones
      */
     public KeySpec {
         publicKey = List.copyOf(publicKey);
         privateKey = List.copyOf(privateKey);
         nested = Map.copyOf(nested);
+        alternativePrivateKey = List.copyOf(alternativePrivateKey);
     }
 
     /**
@@ -38,7 +45,7 @@ public record KeySpec(
      * @return the specification
      */
     public static KeySpec of(List<String> publicKey, List<String> privateKey) {
-        return new KeySpec(publicKey, privateKey, Map.of());
+        return new KeySpec(publicKey, privateKey, Map.of(), List.of());
     }
 
     /**
@@ -51,6 +58,19 @@ public record KeySpec(
      */
     public static KeySpec of(
             List<String> publicKey, List<String> privateKey, Map<String, List<String>> nested) {
-        return new KeySpec(publicKey, privateKey, nested);
+        return new KeySpec(publicKey, privateKey, nested, List.of());
+    }
+
+    /**
+     * Creates a key specification whose private key may alternatively carry another set of fields.
+     *
+     * @param publicKey required public key fields
+     * @param privateKey required private key fields
+     * @param alternativePrivateKey private key fields accepted instead of the required ones
+     * @return the specification
+     */
+    public static KeySpec withAlternativePrivateKey(
+            List<String> publicKey, List<String> privateKey, List<String> alternativePrivateKey) {
+        return new KeySpec(publicKey, privateKey, Map.of(), alternativePrivateKey);
     }
 }

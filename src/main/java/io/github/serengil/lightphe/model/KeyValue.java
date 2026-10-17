@@ -74,6 +74,25 @@ public sealed interface KeyValue {
         }
     }
 
+    /**
+     * A list of integer lists, e.g. a Gentry-Halevi-Vaikuntanathan matrix or the vector of curve
+     * points of Freeman-Boneh-Goh-Nissim.
+     *
+     * @param rows the rows
+     */
+    record Matrix(List<List<BigInteger>> rows) implements KeyValue {
+
+        /** Creates a matrix key component, copying the rows defensively. */
+        public Matrix {
+            rows = rows.stream().map(List::copyOf).toList();
+        }
+
+        @Override
+        public String toString() {
+            return rows.toString();
+        }
+    }
+
     /** A nested dictionary key component, used by Boneh-Goh-Nissim to carry its generated curve. */
     final class Nested implements KeyValue {
 
@@ -188,6 +207,16 @@ public sealed interface KeyValue {
      */
     static KeyValue numbers(List<BigInteger> values) {
         return new Numbers(values);
+    }
+
+    /**
+     * Wraps a list of integer lists.
+     *
+     * @param rows the rows
+     * @return the key component
+     */
+    static KeyValue matrix(List<List<BigInteger>> rows) {
+        return new Matrix(rows);
     }
 
     /**

@@ -30,7 +30,8 @@ public final class KeyValidator {
      * <p>The required-field specification is read from the cryptosystem's {@link
      * io.github.serengil.lightphe.model.Homomorphic#requiredKeys()}, which carries the public and
      * private field lists plus an optional nested entry for dictionary-valued {@code public_key}
-     * sub-fields.
+     * sub-fields. An optional alternative private key lists another set of fields that is accepted
+     * instead of the required {@code private_key} fields.
      *
      * @param algorithm the algorithm the keys are meant for
      * @param keys the user-supplied key pair
@@ -52,7 +53,7 @@ public final class KeyValidator {
 
         requireFields(algorithm, Keys.PUBLIC_KEY, keys.publicKey(), spec.publicKey());
         if (keys.privateKey() != null) {
-            requireFields(algorithm, Keys.PRIVATE_KEY, keys.privateKey(), spec.privateKey());
+            requirePrivateFields(algorithm, keys.privateKey(), spec);
         }
 
         for (Map.Entry<String, List<String>> entry : spec.nested().entrySet()) {
@@ -87,6 +88,27 @@ public final class KeyValidator {
             throw new IllegalArgumentException(
                     algorithm + " '" + section + "' is missing required fields: " + missing);
         }
+    }
+
+    private static void requirePrivateFields(
+            Algorithm algorithm, Map<String, KeyValue> present, KeySpec spec) {
+        List<String> missing = missingFields(present.keySet(), spec.privateKey());
+        List<String> alternative = spec.alternativePrivateKey();
+        if (!missing.isEmpty() && !alternative.isEmpty()) {
+            if (missingFields(present.keySet(), alternative).isEmpty()) {
+                return;
+            }
+            throw new IllegalArgumentException(
+                    algorithm
+                            + " '"
+                            + Keys.PRIVATE_KEY
+                            + "' is missing required fields: "
+                            + missing
+                            + " (or alternatively "
+                            + alternative
+                            + ")");
+        }
+        requireFields(algorithm, Keys.PRIVATE_KEY, present, spec.privateKey());
     }
 
     private static List<String> missingFields(
