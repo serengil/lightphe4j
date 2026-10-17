@@ -33,6 +33,14 @@ class KeyValidatorTest {
         "Joye-Libert, 50",
         "Castagnos-Laguillaumie, 50",
         "Ishai-Paskin, 50",
+        "Damgard-Geisler-Kroigaard, 50",
+        "Bresson-Catalano-Pointcheval, 50",
+        "Camenisch-Shoup, 50",
+        "EllipticCurve-Paillier, 50",
+        "Regev, 50",
+        "Brakerski-Vaikuntanathan, 64",
+        "Freeman-Boneh-Goh-Nissim, 64",
+        "Gentry-Halevi-Vaikuntanathan, 2",
     })
     @DisplayName("Dropping a required public_key sub-field is rejected")
     void testMissingPublicKeyFieldIsRejected(String algorithmName, int keySize) {
@@ -72,6 +80,14 @@ class KeyValidatorTest {
         "Joye-Libert, 50",
         "Castagnos-Laguillaumie, 50",
         "Ishai-Paskin, 50",
+        "Damgard-Geisler-Kroigaard, 50",
+        "Bresson-Catalano-Pointcheval, 50",
+        "Camenisch-Shoup, 50",
+        "EllipticCurve-Paillier, 50",
+        "Regev, 50",
+        "Brakerski-Vaikuntanathan, 64",
+        "Freeman-Boneh-Goh-Nissim, 64",
+        "Gentry-Halevi-Vaikuntanathan, 2",
     })
     @DisplayName("Dropping a required private_key sub-field is rejected")
     void testMissingPrivateKeyFieldIsRejected(String algorithmName, int keySize) {
@@ -82,9 +98,12 @@ class KeyValidatorTest {
                         .maxTries(10000)
                         .build();
 
-        String field = cs.cs().requiredKeys().privateKey().get(0);
+        List<String> required = cs.cs().requiredKeys().privateKey();
+        String field = required.get(0);
 
+        // keep required fields only, otherwise alternative fields may satisfy validation
         Keys broken = cs.cs().keys().deepCopy();
+        broken.privateKey().keySet().retainAll(required);
         broken.privateKey().remove(field);
 
         assertThatExceptionOfType(IllegalArgumentException.class)
@@ -162,5 +181,31 @@ class KeyValidatorTest {
                 .withMessageContaining("public_key.curve")
                 .withMessageContaining("missing required fields")
                 .withMessageContaining(field);
+    }
+
+    @Test
+    @DisplayName(
+            "Bresson-Catalano-Pointcheval accepts a private key having the master trapdoor only")
+    void testAlternativePrivateKeyIsAccepted() {
+        LightPHE cs =
+                LightPHE.builder()
+                        .algorithmName("Bresson-Catalano-Pointcheval")
+                        .keySize(50)
+                        .build();
+        Keys masterOnly = cs.cs().keys().deepCopy();
+        masterOnly.privateKey().remove("a");
+        // should not raise
+        LightPHE.builder().algorithmName("Bresson-Catalano-Pointcheval").keys(masterOnly).build();
+
+        // neither the required nor the alternative fields
+        masterOnly.privateKey().remove("q");
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(
+                        () ->
+                                LightPHE.builder()
+                                        .algorithmName("Bresson-Catalano-Pointcheval")
+                                        .keys(masterOnly)
+                                        .build())
+                .withMessageMatching("(?s).*missing required fields.*a.*alternatively.*");
     }
 }

@@ -1,8 +1,10 @@
 package io.github.serengil.lightphe.model;
 
+import io.github.serengil.lightphe.ecc.CurvePoint;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * A read-only view of a cryptosystem with its private key stripped.
@@ -120,6 +122,57 @@ public final class PublicOnlyView implements Homomorphic {
     public CipherValue evaluateDecisionTree(
             DecisionTree tree, List<List<BigInteger>> encryptedInput) {
         return delegate.evaluateDecisionTree(tree, encryptedInput);
+    }
+
+    @Override
+    public List<BigInteger> encryptComparisonInput(long value, int bitLength) {
+        return delegate.encryptComparisonInput(value, bitLength);
+    }
+
+    @Override
+    public List<BigInteger> evaluateComparison(List<BigInteger> encryptedInput, long value) {
+        return delegate.evaluateComparison(encryptedInput, value);
+    }
+
+    @Override
+    public List<List<BigInteger>> encryptDecisionTreeFeatures(List<Long> features, int bitLength) {
+        return delegate.encryptDecisionTreeFeatures(features, bitLength);
+    }
+
+    @Override
+    public NumericDecisionTree.Comparisons evaluateDecisionTreeComparisons(
+            NumericDecisionTree tree, List<List<BigInteger>> encryptedFeatures) {
+        return delegate.evaluateDecisionTreeComparisons(tree, encryptedFeatures);
+    }
+
+    @Override
+    public List<NumericDecisionTree.EncryptedLeaf> evaluateDecisionTreeLeaves(
+            NumericDecisionTree.ServerState serverState, List<BigInteger> encryptedAnswers) {
+        return delegate.evaluateDecisionTreeLeaves(serverState, encryptedAnswers);
+    }
+
+    @Override
+    public BigInteger evaluateArgmax(
+            List<BigInteger> encryptedValues,
+            int bitLength,
+            Function<ArgmaxMessage, List<BigInteger>> client) {
+        return delegate.evaluateArgmax(encryptedValues, bitLength, client);
+    }
+
+    @Override
+    public Keys generateUserKeys() {
+        return delegate.generateUserKeys();
+    }
+
+    @Override
+    public VerifiableCiphertext encryptVerifiably(BigInteger secret, String label) {
+        return delegate.encryptVerifiably(secret, label);
+    }
+
+    @Override
+    public boolean verifyEncryption(
+            VerifiableCiphertext verifiableCiphertext, CurvePoint publicPoint, String label) {
+        return delegate.verifyEncryption(verifiableCiphertext, publicPoint, label);
     }
 
     @Override

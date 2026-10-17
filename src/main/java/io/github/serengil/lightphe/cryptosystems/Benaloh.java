@@ -101,7 +101,15 @@ public final class Benaloh extends AbstractHomomorphic {
                 continue;
             }
 
-            // to guarantee correct decryption, none of r's prime factors may satisfy the condition
+            // to guarantee correct decryption, x = y^(phi/r) must have order exactly r.
+            // Benaloh's original key generation only checks y^(phi/r) != 1 mod n, which is
+            // not enough for a composite r: x may then have a smaller order, so different
+            // messages would map to the same x^m and decryption would be ambiguous.
+            // The corrected condition checks every prime factor of r as below. Since r is
+            // always prime here, both conditions are the same, but this check keeps keys
+            // correct even if r becomes composite in the future.
+            // Ref: Fousse, L., Lafourcade, P., Alnuaimi, M. (2011). Benaloh's Dense
+            //     Probabilistic Encryption Revisited. AFRICACRYPT 2011.
             boolean decryptionGuaranteed = true;
             for (BigInteger primeFactor : MathUtils.primeFactors(r)) {
                 if (y.modPow(phi.divide(primeFactor), n).equals(BigInteger.ONE)) {
@@ -109,7 +117,7 @@ public final class Benaloh extends AbstractHomomorphic {
                 }
             }
             if (!decryptionGuaranteed) {
-                logger.info("decryption not guaranteed, retrying...");
+                logger.debug("decryption not guaranteed, retrying...");
                 continue;
             }
 
@@ -172,7 +180,7 @@ public final class Benaloh extends AbstractHomomorphic {
         BigInteger n = keys.publicNumber("n");
 
         BigInteger message = plaintext;
-        if (message.compareTo(r) > 0) {
+        if (message.compareTo(r) >= 0) {
             BigInteger original = message;
             message = message.mod(r);
             logger.info(
@@ -235,7 +243,7 @@ public final class Benaloh extends AbstractHomomorphic {
     public CipherValue multiplyByConstant(CipherValue ciphertext, BigInteger constant) {
         BigInteger n = keys.publicNumber("n");
         BigInteger scalar = constant;
-        if (scalar.compareTo(plaintextModulo) > 0) {
+        if (scalar.compareTo(plaintextModulo) >= 0) {
             scalar = scalar.mod(plaintextModulo);
             logger.info(
                     "Benaloh can encrypt messages [1, "

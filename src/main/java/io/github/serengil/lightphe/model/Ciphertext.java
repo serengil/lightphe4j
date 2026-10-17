@@ -2,7 +2,6 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.commons.PheUtils;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
-import io.github.serengil.lightphe.cryptosystems.JoyeLibert;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
 import java.util.Objects;
@@ -36,8 +35,8 @@ public final class Ciphertext {
      * @param algorithmName the algorithm the ciphertext was produced with
      * @param keys the key material; a public key is enough to keep computing
      * @param value the encrypted payload
-     * @param form elliptic curve form, only used by elliptic curve ElGamal
-     * @param curve elliptic curve name, only used by elliptic curve ElGamal
+     * @param form elliptic curve form, only used by elliptic curve ElGamal and Camenisch-Shoup
+     * @param curve elliptic curve name, only used by elliptic curve ElGamal and Camenisch-Shoup
      */
     public Ciphertext(
             Algorithm algorithmName, Keys keys, CipherValue value, String form, String curve) {
@@ -174,9 +173,7 @@ public final class Ciphertext {
      */
     public Ciphertext multiply(double constant) {
         requirePublicKey("homomorphic multiplication");
-        if (algorithmName == Algorithm.JOYE_LIBERT) {
-            throw new IllegalArgumentException(JoyeLibert.FLOAT_NOT_SUPPORTED_MSG);
-        }
+        CryptosystemFactory.requireFloatSupport(algorithmName);
         BigInteger normalized = PheUtils.normalizeInput(constant, cs.plaintextModulo());
         return new Ciphertext(cs, cs.multiplyByConstant(value, normalized));
     }

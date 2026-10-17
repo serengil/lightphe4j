@@ -11,8 +11,8 @@ import java.util.Map;
  *
  * <p>The wire format is byte-for-byte the one {@code json.dumps(keys)} produces in the Python
  * library, so key files can be exchanged between the two implementations: integers are written as
- * bare JSON numbers of arbitrary length, curve points as two-element arrays, and the
- * Boneh-Goh-Nissim curve as a nested object.
+ * bare JSON numbers of arbitrary length, curve points as two-element arrays, matrices as arrays of
+ * arrays, and the Boneh-Goh-Nissim curve as a nested object.
  *
  * <p>A hand-rolled parser keeps the library free of a JSON dependency; it accepts exactly the shape
  * this codec emits.
@@ -108,6 +108,15 @@ public final class KeysCodec {
                 out.append(numbers.values().get(i));
             }
             out.append(']');
+        } else if (value instanceof KeyValue.Matrix matrix) {
+            out.append('[');
+            for (int i = 0; i < matrix.rows().size(); i++) {
+                if (i > 0) {
+                    out.append(", ");
+                }
+                writeValue(out, new KeyValue.Numbers(matrix.rows().get(i)));
+            }
+            out.append(']');
         } else if (value instanceof KeyValue.Nested nested) {
             writeSection(out, nested.entries());
         } else {
@@ -178,14 +187,18 @@ public final class KeysCodec {
         if (raw instanceof BigInteger number) {
             return new KeyValue.Num(number);
         }
-        if (raw instanceof List<?> list) {
-            List<BigInteger> values = new ArrayList<>(list.size());
-            for (Object item : list) {
-                if (!(item instanceof BigInteger number)) {
-                    throw new IllegalArgumentException("a key list must hold integers only");
+        if (raw instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof List<?>) {
+            List<List<BigInteger>> rows = new ArrayList<>(list.size());
+            for (Object row : list) {
+                if (!(row instanceof List<?>)) {
+                    throw new IllegalArgumentException("a key matrix must hold lists only");
                 }
-                values.add(number);
+                rows.add(toIntegers((List<?>) row));
             }
+            return new KeyValue.Matrix(rows);
+        }
+        if (raw instanceof List<?> list) {
+            List<BigInteger> values = toIntegers(list);
             // two integers are a curve point, any other length is a plain list
             if (values.size() == 2) {
                 return new KeyValue.Point(values.get(0), values.get(1));
@@ -200,6 +213,17 @@ public final class KeysCodec {
             return new KeyValue.Nested(nested);
         }
         throw new IllegalArgumentException("unsupported key material - " + raw);
+    }
+
+    private static List<BigInteger> toIntegers(List<?> list) {
+        List<BigInteger> values = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (!(item instanceof BigInteger number)) {
+                throw new IllegalArgumentException("a key list must hold integers only");
+            }
+            values.add(number);
+        }
+        return values;
     }
 
     /** Minimal recursive-descent JSON reader covering the shapes this codec emits. */
