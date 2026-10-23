@@ -62,7 +62,7 @@ To install it via [maven](https://repo1.maven.org/maven2/io/github/serengil/ligh
 <dependency>
     <groupId>io.github.serengil</groupId>
     <artifactId>lightphe4j</artifactId>
-    <version>0.0.27</version>
+    <version>0.0.28</version>
 </dependency>
 ```
 
