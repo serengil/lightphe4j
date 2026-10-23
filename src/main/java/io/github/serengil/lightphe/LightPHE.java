@@ -81,6 +81,12 @@ public final class LightPHE {
     private final CatalanoFiore catalanoFiore;
 
     /**
+     * Public-key-only cryptosystem shared by ciphertexts, built on first use as constructing one
+     * can be expensive.
+     */
+    private volatile Homomorphic publicCs;
+
+    /**
      * Builds a LightPHE cryptosystem.
      *
      * @param algorithmName one of {@code RSA}, {@code ElGamal}, {@code Exponential-ElGamal}, {@code
@@ -845,7 +851,14 @@ public final class LightPHE {
     // -----------------------------------------------------------------------
 
     private Ciphertext buildCiphertext(CipherValue value) {
-        return new Ciphertext(algorithmName, cs.keys().publicOnly(), value, form, curve);
+        Homomorphic shared = publicCs;
+        if (shared == null) {
+            Ciphertext ciphertext =
+                    new Ciphertext(algorithmName, cs.keys().publicOnly(), value, form, curve);
+            publicCs = ciphertext.cs();
+            return ciphertext;
+        }
+        return Ciphertext.of(shared, value);
     }
 
     private void requirePublicKey(String operation) {

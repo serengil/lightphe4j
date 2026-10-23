@@ -187,19 +187,20 @@ public final class CurvePoint {
      * tractable here because partially homomorphic schemes keep their plaintexts small. The search
      * is exhaustive and gives up once {@code k} exceeds the curve order.
      *
-     * <p>Mirroring {@code EllipticCurvePoint.__truediv__} of the Python implementation, the
-     * identity element resolves to the curve order rather than to zero.
+     * <p>The identity element resolves to zero, the canonical representative of the curve order.
+     * The Python implementation's LightECC dependency returns the order itself instead, see
+     * https://github.com/serengil/LightECC/issues/14.
      *
      * @param base the base point
      * @return the scalar behind this point
      * @throws IllegalArgumentException when the scalar cannot be recovered
      */
     public BigInteger divide(CurvePoint base) {
+        if (isIdentity()) {
+            return BigInteger.ZERO;
+        }
         if (equals(base)) {
             return BigInteger.ONE;
-        }
-        if (isIdentity()) {
-            return curve.order();
         }
 
         // The reference implementation recomputes k*base from scratch on every step; accumulating
