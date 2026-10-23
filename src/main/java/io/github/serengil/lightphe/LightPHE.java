@@ -62,7 +62,7 @@ import lombok.Builder;
 public final class LightPHE {
 
     /** Library version, tracking the Python release this port is based on. */
-    public static final String VERSION = "0.0.27";
+    public static final String VERSION = "0.0.28";
 
     /** Default number of digits kept after the decimal point in tensor operations. */
     public static final int DEFAULT_PRECISION = 5;
@@ -79,6 +79,12 @@ public final class LightPHE {
 
     /** Catalano-Fiore transform wrapping the cryptosystem, or {@code null} without the boost. */
     private final CatalanoFiore catalanoFiore;
+
+    /**
+     * Public-key-only cryptosystem shared by ciphertexts, built on first use as constructing one
+     * can be expensive.
+     */
+    private volatile Homomorphic publicCs;
 
     /**
      * Builds a LightPHE cryptosystem.
@@ -845,7 +851,14 @@ public final class LightPHE {
     // -----------------------------------------------------------------------
 
     private Ciphertext buildCiphertext(CipherValue value) {
-        return new Ciphertext(algorithmName, cs.keys().publicOnly(), value, form, curve);
+        Homomorphic shared = publicCs;
+        if (shared == null) {
+            Ciphertext ciphertext =
+                    new Ciphertext(algorithmName, cs.keys().publicOnly(), value, form, curve);
+            publicCs = ciphertext.cs();
+            return ciphertext;
+        }
+        return Ciphertext.of(shared, value);
     }
 
     private void requirePublicKey(String operation) {

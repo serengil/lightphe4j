@@ -47,6 +47,16 @@ class EllipticCurveElGamalTest {
         assertThat(cs.decrypt(c1.multiply(m2))).isEqualTo(BigInteger.valueOf(m1 * m2));
         assertThat(cs.decrypt(c2.multiply(m1))).isEqualTo(BigInteger.valueOf(m1 * m2));
 
+        // zero: identity element (point at infinity) cases
+        Ciphertext c0 = cs.encrypt(0L);
+        assertThat(cs.decrypt(c0)).isEqualTo(BigInteger.ZERO);
+        assertThat(cs.decrypt(c1.multiply(0L))).isEqualTo(BigInteger.ZERO);
+        assertThat(cs.decrypt(c1.multiply(0L).multiply(m2))).isEqualTo(BigInteger.ZERO);
+        assertThat(cs.decrypt(c0.add(c2))).isEqualTo(BigInteger.valueOf(m2));
+        assertThat(cs.decrypt(c1.multiply(0L).add(c2))).isEqualTo(BigInteger.valueOf(m2));
+        assertThat(cs.cs().decrypt(cs.cs().reencrypt(c1.multiply(0L).value())))
+                .isEqualTo(BigInteger.ZERO);
+
         // unsupported homomorphic operations
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.multiply(c2));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> c1.xor(c2));
