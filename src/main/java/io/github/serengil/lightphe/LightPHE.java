@@ -62,7 +62,7 @@ import lombok.Builder;
 public final class LightPHE {
 
     /** Library version, tracking the Python release this port is based on. */
-    public static final String VERSION = "0.0.27";
+    public static final String VERSION = "0.0.28";
 
     /** Default number of digits kept after the decimal point in tensor operations. */
     public static final int DEFAULT_PRECISION = 5;
