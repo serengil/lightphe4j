@@ -237,14 +237,22 @@ class CatalanoFioreTest {
         "EllipticCurve-ElGamal, discrete logarithm",
         "Okamoto-Uchiyama, plaintext modulus p is secret",
         "Regev, noise budget",
+        "Lyubashevsky-Peikert-Regev, noise budget",
         "Goldwasser-Micali, xor only",
+        "ML-KEM, xor only",
+        "Gentry-Sahai-Waters, multiplications of bits",
         "Boneh-Goh-Nissim, already supports one multiplication",
         "RSA, not additively homomorphic",
         "ElGamal, not additively homomorphic",
     })
     @DisplayName("Catalano-Fiore explains why an algorithm is not supported")
     void testUnsupportedAlgorithms(String algorithmName, String reason) {
-        int keySize = "Regev".equals(algorithmName) ? 16 : 64;
+        int keySize =
+                switch (algorithmName) {
+                    case "Regev", "Lyubashevsky-Peikert-Regev", "Gentry-Sahai-Waters" -> 16;
+                    case "ML-KEM" -> 512;
+                    default -> 64;
+                };
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(
                         () ->
