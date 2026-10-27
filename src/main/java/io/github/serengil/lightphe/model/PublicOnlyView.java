@@ -176,6 +176,70 @@ public final class PublicOnlyView implements Homomorphic {
     }
 
     @Override
+    public CipherValue encrypt(BigInteger plaintext, BigInteger randomKey) {
+        return delegate.encrypt(plaintext, randomKey);
+    }
+
+    @Override
+    public BigInteger combinePartialDecryptions(
+            CipherValue ciphertext, List<PartialDecryption> partialDecryptions, boolean verify) {
+        return delegate.combinePartialDecryptions(ciphertext, partialDecryptions, verify);
+    }
+
+    @Override
+    public boolean verifyPartialDecryption(
+            CipherValue ciphertext, PartialDecryption partialDecryption) {
+        return delegate.verifyPartialDecryption(ciphertext, partialDecryption);
+    }
+
+    @Override
+    public boolean verifyDecryption(CipherValue ciphertext, BigInteger plaintext, Proof proof) {
+        return delegate.verifyDecryption(ciphertext, plaintext, proof);
+    }
+
+    @Override
+    public boolean supportsMembershipProofs() {
+        return delegate.supportsMembershipProofs();
+    }
+
+    @Override
+    public Proven<CipherValue> encryptWithProof(
+            BigInteger plaintext, List<BigInteger> values, Object context) {
+        return delegate.encryptWithProof(plaintext, values, context);
+    }
+
+    @Override
+    public boolean verifyCiphertext(
+            CipherValue ciphertext, Proof proof, List<BigInteger> values, Object context) {
+        return delegate.verifyCiphertext(ciphertext, proof, values, context);
+    }
+
+    @Override
+    public Proof proveMembership(
+            CipherValue ciphertext,
+            BigInteger plaintext,
+            BigInteger randomKey,
+            List<BigInteger> values,
+            Object context) {
+        return delegate.proveMembership(ciphertext, plaintext, randomKey, values, context);
+    }
+
+    @Override
+    public BigInteger combineRandomKeys(List<BigInteger> randomKeys) {
+        return delegate.combineRandomKeys(randomKeys);
+    }
+
+    @Override
+    public Proven<CipherValue> encryptWithProofOfKnowledge(BigInteger plaintext, Object context) {
+        return delegate.encryptWithProofOfKnowledge(plaintext, context);
+    }
+
+    @Override
+    public boolean verifyKnowledge(CipherValue ciphertext, Proof proof, Object context) {
+        return delegate.verifyKnowledge(ciphertext, proof, context);
+    }
+
+    @Override
     public boolean hasPrivateKey() {
         return false;
     }

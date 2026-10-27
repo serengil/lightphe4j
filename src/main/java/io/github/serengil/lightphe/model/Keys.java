@@ -30,18 +30,24 @@ public final class Keys {
     /** Name of the optional curve name entry. */
     public static final String CURVE = "curve";
 
+    /** Name of the threshold key section of a shareholder, as it appears in exported JSON. */
+    public static final String THRESHOLD_KEY = "threshold_key";
+
     private Map<String, KeyValue> publicKey;
     private Map<String, KeyValue> privateKey;
+    private Map<String, KeyValue> thresholdKey;
     private String form;
     private String curve;
 
     private Keys(
             Map<String, KeyValue> publicKey,
             Map<String, KeyValue> privateKey,
+            Map<String, KeyValue> thresholdKey,
             String form,
             String curve) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
+        this.thresholdKey = thresholdKey;
         this.form = form;
         this.curve = curve;
     }
@@ -52,7 +58,7 @@ public final class Keys {
      * @return an empty key pair
      */
     public static Keys empty() {
-        return new Keys(new LinkedHashMap<>(), new LinkedHashMap<>(), null, null);
+        return new Keys(new LinkedHashMap<>(), new LinkedHashMap<>(), null, null, null);
     }
 
     /**
@@ -69,6 +75,7 @@ public final class Keys {
         return new Keys(
                 publicKey == null ? null : new LinkedHashMap<>(publicKey),
                 privateKey == null ? null : new LinkedHashMap<>(privateKey),
+                null,
                 null,
                 null);
     }
@@ -123,6 +130,24 @@ public final class Keys {
      */
     public void restorePrivateKey(Map<String, KeyValue> restored) {
         this.privateKey = restored;
+    }
+
+    /**
+     * Returns the threshold key of a shareholder: its index and its share of the private key.
+     *
+     * @return a live view of the threshold key entries, or {@code null} when absent
+     */
+    public Map<String, KeyValue> thresholdKey() {
+        return thresholdKey;
+    }
+
+    /**
+     * Sets the threshold key of a shareholder.
+     *
+     * @param thresholdKey the index and share of the shareholder, or {@code null} to drop it
+     */
+    public void setThresholdKey(Map<String, KeyValue> thresholdKey) {
+        this.thresholdKey = thresholdKey == null ? null : new LinkedHashMap<>(thresholdKey);
     }
 
     /**
@@ -303,18 +328,21 @@ public final class Keys {
     public Keys deepCopy() {
         Map<String, KeyValue> copiedPublic = publicKey == null ? null : copySection(publicKey);
         Map<String, KeyValue> copiedPrivate = privateKey == null ? null : copySection(privateKey);
-        return new Keys(copiedPublic, copiedPrivate, form, curve);
+        Map<String, KeyValue> copiedThreshold =
+                thresholdKey == null ? null : copySection(thresholdKey);
+        return new Keys(copiedPublic, copiedPrivate, copiedThreshold, form, curve);
     }
 
     /**
-     * Returns a copy of this key pair with the private key section stripped, suitable for handing
-     * to a party that should be able to encrypt and evaluate but not decrypt.
+     * Returns a copy of this key pair with the private key and the threshold key sections stripped,
+     * suitable for handing to a party that should be able to encrypt and evaluate but not decrypt.
      *
      * @return the public-only copy
      */
     public Keys publicOnly() {
         Keys copy = deepCopy();
         copy.removePrivateKey();
+        copy.setThresholdKey(null);
         return copy;
     }
 

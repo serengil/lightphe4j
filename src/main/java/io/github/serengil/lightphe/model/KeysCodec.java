@@ -53,6 +53,15 @@ public final class KeysCodec {
             first = false;
         }
 
+        if (keys.thresholdKey() != null) {
+            if (!first) {
+                out.append(", ");
+            }
+            out.append('"').append(Keys.THRESHOLD_KEY).append("\": ");
+            writeSection(out, keys.thresholdKey());
+            first = false;
+        }
+
         if (keys.form().isPresent()) {
             if (!first) {
                 out.append(", ");
@@ -160,6 +169,11 @@ public final class KeysCodec {
             keys.removePrivateKey();
         } else {
             keys.privateKey().putAll(toSection(privateSection, Keys.PRIVATE_KEY));
+        }
+
+        Object thresholdSection = root.get(Keys.THRESHOLD_KEY);
+        if (thresholdSection != null) {
+            keys.setThresholdKey(toSection(thresholdSection, Keys.THRESHOLD_KEY));
         }
 
         if (root.get(Keys.FORM) instanceof String form) {
