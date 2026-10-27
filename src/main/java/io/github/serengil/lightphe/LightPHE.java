@@ -1,23 +1,41 @@
 package io.github.serengil.lightphe;
 
+import io.github.serengil.lightphe.commons.Classifiers;
 import io.github.serengil.lightphe.commons.KeyValidator;
 import io.github.serengil.lightphe.commons.Logger;
+import io.github.serengil.lightphe.commons.NearestNeighbors;
 import io.github.serengil.lightphe.commons.PheUtils;
+import io.github.serengil.lightphe.commons.SecureAggregation;
+import io.github.serengil.lightphe.commons.Threshold;
+import io.github.serengil.lightphe.commons.Zkp;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
+import io.github.serengil.lightphe.cryptosystems.DamgardGeislerKroigaard;
+import io.github.serengil.lightphe.cryptosystems.DamgardJurik;
+import io.github.serengil.lightphe.cryptosystems.GentrySahaiWaters;
 import io.github.serengil.lightphe.ecc.CurvePoint;
+import io.github.serengil.lightphe.model.Aggregate;
+import io.github.serengil.lightphe.model.AggregationLayout;
 import io.github.serengil.lightphe.model.Algorithm;
 import io.github.serengil.lightphe.model.ArgmaxMessage;
 import io.github.serengil.lightphe.model.CatalanoFiore;
 import io.github.serengil.lightphe.model.CatalanoFioreCiphertext;
 import io.github.serengil.lightphe.model.Ciphertext;
 import io.github.serengil.lightphe.model.DecisionTree;
+import io.github.serengil.lightphe.model.EncryptedKnnQuery;
 import io.github.serengil.lightphe.model.EncryptedTensor;
+import io.github.serengil.lightphe.model.EncryptedUpdate;
 import io.github.serengil.lightphe.model.Fraction;
+import io.github.serengil.lightphe.model.FractionPartialDecryption;
 import io.github.serengil.lightphe.model.Homomorphic;
 import io.github.serengil.lightphe.model.KeyValue;
 import io.github.serengil.lightphe.model.Keys;
 import io.github.serengil.lightphe.model.KeysCodec;
+import io.github.serengil.lightphe.model.KnnDistances;
+import io.github.serengil.lightphe.model.KnnResult;
 import io.github.serengil.lightphe.model.NumericDecisionTree;
+import io.github.serengil.lightphe.model.PartialDecryption;
+import io.github.serengil.lightphe.model.Proof;
+import io.github.serengil.lightphe.model.Proven;
 import io.github.serengil.lightphe.model.PublicOnlyView;
 import io.github.serengil.lightphe.model.VerifiableCiphertext;
 import io.github.serengil.lightphe.model.value.CipherValue;
@@ -31,8 +49,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import lombok.Builder;
@@ -95,14 +117,16 @@ public final class LightPHE {
      *     {@code Sander-Young-Yung}, {@code Boneh-Goh-Nissim}, {@code Joye-Libert}, {@code
      *     Castagnos-Laguillaumie}, {@code Ishai-Paskin}, {@code Damgard-Geisler-Kroigaard}, {@code
      *     Bresson-Catalano-Pointcheval}, {@code Camenisch-Shoup}, {@code EllipticCurve-Paillier},
-     *     {@code Regev}, {@code Brakerski-Vaikuntanathan}, {@code Freeman-Boneh-Goh-Nissim} or
-     *     {@code Gentry-Halevi-Vaikuntanathan}
+     *     {@code Regev}, {@code Brakerski-Vaikuntanathan}, {@code Freeman-Boneh-Goh-Nissim}, {@code
+     *     Gentry-Halevi-Vaikuntanathan}, {@code Lyubashevsky-Peikert-Regev}, {@code ML-KEM} or
+     *     {@code Gentry-Sahai-Waters}
      * @param keys optional private-public key pair
      * @param keyFile if keys were exported already, the file to load them from
      * @param keySize key size in bits. For Regev, it is the lattice dimension. For
-     *     Brakerski-Vaikuntanathan, it is the ring degree. For Freeman-Boneh-Goh-Nissim, it is the
-     *     bit length of the field size. For Gentry-Halevi-Vaikuntanathan, it is the lattice
-     *     dimension in {@code [2, 8]}.
+     *     Brakerski-Vaikuntanathan, Lyubashevsky-Peikert-Regev and Gentry-Sahai-Waters, it is the
+     *     ring degree. For ML-KEM, it is the parameter set: 512, 768 or 1024. For
+     *     Freeman-Boneh-Goh-Nissim, it is the bit length of the field size. For
+     *     Gentry-Halevi-Vaikuntanathan, it is the lattice dimension in {@code [2, 8]}.
      * @param precision precision for homomorphic operations on tensors; zero or less selects the
      *     default of {@value #DEFAULT_PRECISION}
      * @param form the form of the elliptic curve: {@code weierstrass} (default), {@code edwards} or
@@ -116,8 +140,8 @@ public final class LightPHE {
      *     {@code Camenisch-Shoup}, which uses it for verifiable encryption.
      * @param plaintextLimit upper bound for plaintext values. Only used when {@code algorithmName}
      *     is {@code Benaloh}, {@code Sander-Young-Yung}, {@code Regev}, {@code
-     *     Brakerski-Vaikuntanathan}, {@code Freeman-Boneh-Goh-Nissim} or {@code
-     *     Gentry-Halevi-Vaikuntanathan}.
+     *     Brakerski-Vaikuntanathan}, {@code Freeman-Boneh-Goh-Nissim}, {@code
+     *     Gentry-Halevi-Vaikuntanathan} or {@code Lyubashevsky-Peikert-Regev}.
      * @param maxTries maximum attempts to generate keys; zero or less selects the default of 10000.
      *     RSA, Benaloh, Naccache-Stern, Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert,
      *     Castagnos-Laguillaumie, Damgard-Geisler-Kroigaard, Bresson-Catalano-Pointcheval and
@@ -129,6 +153,12 @@ public final class LightPHE {
      *     multiplication, and only integers are supported. Supported for Paillier, Damgard-Jurik,
      *     Bresson-Catalano-Pointcheval, Camenisch-Shoup, EllipticCurve-Paillier, Joye-Libert,
      *     Castagnos-Laguillaumie, Naccache-Stern, Benaloh and Damgard-Geisler-Kroigaard.
+     * @param primeOrder picks the generator of a known prime order while generating keys. Default
+     *     is {@code false}. Threshold decryption and zero-knowledge proofs require this. Only used
+     *     when {@code algorithmName} is {@code ElGamal} or {@code Exponential-ElGamal}.
+     * @param safePrimes generates the modulus as a product of two safe primes. Default is {@code
+     *     false}. Proofs of partial decryption in threshold decryption require this. Only used when
+     *     {@code algorithmName} is {@code Paillier} or {@code Damgard-Jurik}.
      * @throws IllegalArgumentException when the boost is unknown or does not support the algorithm
      */
     @Builder
@@ -142,15 +172,31 @@ public final class LightPHE {
             String curve,
             BigInteger plaintextLimit,
             int maxTries,
-            String boost) {
+            String boost,
+            boolean primeOrder,
+            boolean safePrimes) {
         this.algorithmName = Algorithm.of(algorithmName);
         this.precision = precision > 0 ? precision : DEFAULT_PRECISION;
         this.form = form;
         this.curve = curve;
+        int tries = maxTries > 0 ? maxTries : CryptosystemFactory.DEFAULT_MAX_TRIES;
 
         Keys resolved = keys;
         if (keyFile != null) {
             resolved = restoreKeys(keyFile);
+        }
+
+        if (safePrimes
+                && resolved == null
+                && (this.algorithmName == Algorithm.PAILLIER
+                        || this.algorithmName == Algorithm.DAMGARD_JURIK)) {
+            resolved =
+                    Threshold.generateSafePaillierKeys(
+                            keySize == null ? CryptosystemFactory.DEFAULT_KEY_SIZE : keySize,
+                            tries,
+                            this.algorithmName == Algorithm.DAMGARD_JURIK
+                                    ? DamgardJurik.DEFAULT_S
+                                    : null);
         }
 
         if (resolved != null) {
@@ -161,12 +207,7 @@ public final class LightPHE {
                 CryptosystemFactory.build(
                         this.algorithmName,
                         new CryptosystemFactory.Options(
-                                resolved,
-                                keySize,
-                                form,
-                                curve,
-                                plaintextLimit,
-                                maxTries > 0 ? maxTries : CryptosystemFactory.DEFAULT_MAX_TRIES));
+                                resolved, keySize, form, curve, plaintextLimit, tries, primeOrder));
 
         // Catalano-Fiore transform wraps the cryptosystem without changing it
         if (boost == null) {
@@ -222,6 +263,11 @@ public final class LightPHE {
     public Ciphertext encrypt(BigInteger plaintext) {
         requirePublicKey("encryption");
         requireNoBoost();
+        if (algorithmName == Algorithm.GENTRY_SAHAI_WATERS
+                && !plaintext.equals(BigInteger.ZERO)
+                && !plaintext.equals(BigInteger.ONE)) {
+            throw new IllegalArgumentException(GentrySahaiWaters.FLOAT_NOT_SUPPORTED_MSG);
+        }
         CipherValue ciphertext =
                 cs.encrypt(PheUtils.normalizeInput(plaintext, cs.plaintextModulo()));
         return buildCiphertext(ciphertext);
@@ -455,6 +501,566 @@ public final class LightPHE {
      */
     public BigInteger decryptVerifiableCiphertext(VerifiableCiphertext verifiableCiphertext) {
         return decryptVerifiableCiphertext(verifiableCiphertext, "");
+    }
+
+    // -----------------------------------------------------------------------
+    // Threshold decryption
+    // -----------------------------------------------------------------------
+
+    /**
+     * Splits the private key into shares for threshold decryption. Any threshold many shareholders
+     * can decrypt a ciphertext together, but fewer shareholders cannot. Runs on dealer side.
+     * Threshold parameters are added into the public key, and the private key is dropped from this
+     * cryptosystem afterwards, so export the public key again. Supported by ElGamal,
+     * Exponential-ElGamal, EllipticCurve-ElGamal, Paillier and Damgard-Jurik. ElGamal and
+     * Exponential-ElGamal keys must be generated with {@code primeOrder = true}.
+     *
+     * @param threshold minimum number of shareholders required to decrypt
+     * @param parties total number of shareholders
+     * @return the public key and share of each shareholder. Each item must be sent to its own
+     *     shareholder secretly.
+     * @throws IllegalArgumentException when a key is missing, the threshold is invalid, or the
+     *     scheme does not support threshold decryption
+     */
+    public List<Keys> generateThresholdKeys(int threshold, int parties) {
+        requirePrivateKey("generate threshold keys");
+        requirePublicKeyTo("generate threshold keys");
+        Threshold.validateThreshold(threshold, parties);
+
+        List<Keys> shareKeys = cs.generateThresholdKeys(threshold, parties);
+
+        // dealer forgets the private key, and public key now has threshold parameters
+        cs.keys().removePrivateKey();
+        publicCs = null;
+
+        return shareKeys;
+    }
+
+    /**
+     * Decrypts a ciphertext partially with the share of a shareholder. Partial decryption reveals
+     * nothing about the plaintext alone. Runs on shareholder side.
+     *
+     * @param ciphertext the encrypted message
+     * @param prove set this to {@code true} to attach a zero-knowledge proof that the partial
+     *     decryption is computed with the share of this shareholder. Supported by ElGamal,
+     *     Exponential-ElGamal, EllipticCurve-ElGamal, and Paillier and Damgard-Jurik with keys
+     *     generated with {@code safePrimes = true}.
+     * @return the partial decryption, to be sent to the combiner
+     * @throws IllegalArgumentException when the threshold key is missing
+     */
+    public PartialDecryption partialDecrypt(Ciphertext ciphertext, boolean prove) {
+        requireThresholdKey();
+        return cs.partialDecrypt(ciphertext.value(), prove);
+    }
+
+    /**
+     * Decrypts a ciphertext partially without a proof.
+     *
+     * @param ciphertext the encrypted message
+     * @return the partial decryption, to be sent to the combiner
+     */
+    public PartialDecryption partialDecrypt(Ciphertext ciphertext) {
+        return partialDecrypt(ciphertext, false);
+    }
+
+    /**
+     * Ciphertexts supporting multiplication do not support threshold decryption, so this always
+     * fails. It exists to report that clearly rather than to leave the overload missing.
+     *
+     * @param ciphertext the encrypted message
+     * @param prove ignored
+     * @return never returns
+     * @throws IllegalArgumentException always
+     */
+    public PartialDecryption partialDecrypt(CatalanoFioreCiphertext ciphertext, boolean prove) {
+        requireThresholdKey();
+        throw new IllegalArgumentException(
+                "Ciphertexts supporting multiplication do not support threshold decryption");
+    }
+
+    /**
+     * Decrypts an encrypted tensor partially with the share of a shareholder.
+     *
+     * @param encryptedTensor the encrypted tensor
+     * @param prove set this to {@code true} to attach zero-knowledge proofs
+     * @return the partial decryptions of each item, to be sent to the combiner
+     * @throws IllegalArgumentException when the threshold key is missing
+     */
+    public List<FractionPartialDecryption> partialDecryptTensor(
+            EncryptedTensor encryptedTensor, boolean prove) {
+        requireThresholdKey();
+        List<FractionPartialDecryption> partials = new ArrayList<>();
+        for (Fraction fraction : encryptedTensor.fractions()) {
+            partials.add(
+                    new FractionPartialDecryption(
+                            cs.partialDecrypt(fraction.absDividend(), prove),
+                            cs.partialDecrypt(fraction.divisor(), prove)));
+        }
+        return partials;
+    }
+
+    /**
+     * Restores the plaintext from partial decryptions of at least threshold many shareholders.
+     * Public key is enough, so anyone can combine them.
+     *
+     * @param ciphertext the encrypted message
+     * @param partialDecryptions outputs of {@link #partialDecrypt} of shareholders
+     * @param verify set this to {@code true} to check zero-knowledge proofs of partial decryptions,
+     *     and discard invalid or unproven ones. Otherwise, a cheating shareholder can cause a wrong
+     *     plaintext silently.
+     * @return the restored message
+     * @throws IllegalArgumentException when there are not enough valid partial decryptions
+     */
+    public BigInteger combinePartialDecryptions(
+            Ciphertext ciphertext, List<PartialDecryption> partialDecryptions, boolean verify) {
+        requirePublicKeyTo("combine partial decryptions");
+        return cs.combinePartialDecryptions(ciphertext.value(), partialDecryptions, verify);
+    }
+
+    /**
+     * Restores the plaintext from partial decryptions without checking their proofs.
+     *
+     * @param ciphertext the encrypted message
+     * @param partialDecryptions outputs of {@link #partialDecrypt} of shareholders
+     * @return the restored message
+     */
+    public BigInteger combinePartialDecryptions(
+            Ciphertext ciphertext, List<PartialDecryption> partialDecryptions) {
+        return combinePartialDecryptions(ciphertext, partialDecryptions, false);
+    }
+
+    /**
+     * Restores an encrypted tensor from partial decryptions of at least threshold many
+     * shareholders.
+     *
+     * @param encryptedTensor the encrypted tensor
+     * @param partialDecryptions outputs of {@link #partialDecryptTensor} of shareholders
+     * @param verify set this to {@code true} to check zero-knowledge proofs of partial decryptions
+     * @return the restored values
+     */
+    public List<Double> combineTensorPartialDecryptions(
+            EncryptedTensor encryptedTensor,
+            List<List<FractionPartialDecryption>> partialDecryptions,
+            boolean verify) {
+        requirePublicKeyTo("combine partial decryptions");
+        List<Double> plainTensor = new ArrayList<>();
+        List<Fraction> fractions = encryptedTensor.fractions();
+        for (int k = 0; k < fractions.size(); k++) {
+            Fraction fraction = fractions.get(k);
+            List<PartialDecryption> absDividends = new ArrayList<>();
+            List<PartialDecryption> divisors = new ArrayList<>();
+            for (List<FractionPartialDecryption> partials : partialDecryptions) {
+                absDividends.add(partials.get(k).absDividend());
+                divisors.add(partials.get(k).divisor());
+            }
+            BigInteger absDividend =
+                    cs.combinePartialDecryptions(fraction.absDividend(), absDividends, verify);
+            BigInteger divisor = cs.combinePartialDecryptions(fraction.divisor(), divisors, verify);
+            plainTensor.add(
+                    new BigDecimal(absDividend)
+                            .divide(new BigDecimal(divisor), DIVISION_CONTEXT)
+                            .multiply(BigDecimal.valueOf(fraction.sign()))
+                            .doubleValue());
+        }
+        return plainTensor;
+    }
+
+    /**
+     * Verifies that a partial decryption is computed with the share of its shareholder. Public key
+     * is enough. Partial decryption must be created with a proof. {@link
+     * #combinePartialDecryptions} does this if verify is set and discards invalid ones, so this is
+     * useful to find a cheating shareholder.
+     *
+     * @param ciphertext the encrypted message
+     * @param partialDecryption the output of {@link #partialDecrypt}
+     * @return {@code true} when the partial decryption is proven to be correct
+     */
+    public boolean verifyPartialDecryption(
+            Ciphertext ciphertext, PartialDecryption partialDecryption) {
+        requirePublicKeyTo("verify partial decryption");
+        return cs.verifyPartialDecryption(ciphertext.value(), partialDecryption);
+    }
+
+    // -----------------------------------------------------------------------
+    // Zero-knowledge proofs
+    // -----------------------------------------------------------------------
+
+    /**
+     * Decrypts a ciphertext and proves that the decryption is correct, without revealing the
+     * private key. Runs on private key owner side, e.g. a tallying authority announcing the result
+     * of an election. Supported by ElGamal, Exponential-ElGamal (keys generated with {@code
+     * primeOrder = true}), EllipticCurve-ElGamal, Paillier and Damgard-Jurik.
+     *
+     * @param ciphertext the encrypted message
+     * @return the restored message, same as {@link #decrypt(Ciphertext)}, and the proof of correct
+     *     decryption to be shared with the verifier
+     */
+    public Proven<BigInteger> decryptWithProof(Ciphertext ciphertext) {
+        requirePrivateKey("perform decryption");
+        requirePublicKeyTo("perform decryption");
+        return cs.decryptWithProof(ciphertext.value());
+    }
+
+    /**
+     * Verifies that a ciphertext is decrypted to the given plaintext. Public key is enough, so
+     * anyone can check the announced plaintext.
+     *
+     * @param ciphertext the encrypted message
+     * @param plaintext the claimed plaintext
+     * @param proof the output of {@link #decryptWithProof}
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyDecryption(Ciphertext ciphertext, BigInteger plaintext, Proof proof) {
+        requirePublicKeyTo("verify decryption");
+        return cs.verifyDecryption(ciphertext.value(), plaintext, proof);
+    }
+
+    /**
+     * Verifies that a ciphertext is decrypted to the given plaintext.
+     *
+     * @param ciphertext the encrypted message
+     * @param plaintext the claimed plaintext
+     * @param proof the output of {@link #decryptWithProof}
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyDecryption(Ciphertext ciphertext, long plaintext, Proof proof) {
+        return verifyDecryption(ciphertext, BigInteger.valueOf(plaintext), proof);
+    }
+
+    /**
+     * Encrypts a plaintext and proves that it is one of the allowed values, without revealing which
+     * one. For instance, a voter proves that the encrypted vote is 0 or 1, so cannot cheat with a
+     * vote of 100 in the homomorphic tally. Public key is enough. Supported by Exponential-ElGamal
+     * (keys generated with {@code primeOrder = true}), EllipticCurve-ElGamal, Paillier and
+     * Damgard-Jurik.
+     *
+     * @param plaintext the message to encrypt, one of values
+     * @param values the allowed values; {@code null} defaults to {@code [0, 1]}
+     * @param context public data bound to the proof, e.g. id of the voter, so that the proof cannot
+     *     be copied for another context. A string, number, boolean, list or map of them, or {@code
+     *     null}.
+     * @return the ciphertext and the proof that it encrypts one of values
+     * @throws IllegalArgumentException when the plaintext is not one of the allowed values
+     */
+    public Proven<Ciphertext> encryptWithProof(
+            BigInteger plaintext, List<? extends Number> values, Object context) {
+        requirePublicKey("encryption");
+        List<BigInteger> normalized = normalizeValues(values);
+        BigInteger message = PheUtils.normalizeInput(plaintext, cs.plaintextModulo());
+        if (!normalized.contains(message)) {
+            throw new IllegalArgumentException("Plaintext must be one of the allowed values");
+        }
+        Proven<CipherValue> proven = cs.encryptWithProof(message, normalized, context);
+        return new Proven<>(buildCiphertext(proven.value()), proven.proof());
+    }
+
+    /**
+     * Encrypts a plaintext and proves that it is one of the allowed values.
+     *
+     * @param plaintext the message to encrypt, one of values
+     * @param values the allowed values; {@code null} defaults to {@code [0, 1]}
+     * @param context public data bound to the proof
+     * @return the ciphertext and the proof that it encrypts one of values
+     */
+    public Proven<Ciphertext> encryptWithProof(
+            long plaintext, List<? extends Number> values, Object context) {
+        return encryptWithProof(BigInteger.valueOf(plaintext), values, context);
+    }
+
+    /**
+     * Encrypts a plaintext and proves that it is 0 or 1, without a context.
+     *
+     * @param plaintext the message to encrypt, 0 or 1
+     * @return the ciphertext and the proof that it encrypts 0 or 1
+     */
+    public Proven<Ciphertext> encryptWithProof(long plaintext) {
+        return encryptWithProof(plaintext, null, null);
+    }
+
+    /**
+     * Verifies that a ciphertext encrypts one of the allowed values without decrypting it. Public
+     * key is enough, e.g. anyone can check the ballots of an election.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithProof}
+     * @param values the allowed values; {@code null} defaults to {@code [0, 1]}
+     * @param context public data that the proof is expected to be bound to
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyCiphertext(
+            Ciphertext ciphertext, Proof proof, List<? extends Number> values, Object context) {
+        requirePublicKeyTo("verify ciphertext");
+        List<BigInteger> normalized = normalizeValues(values);
+        if (ciphertext == null) {
+            return false;
+        }
+        return cs.verifyCiphertext(ciphertext.value(), proof, normalized, context);
+    }
+
+    /**
+     * Verifies that a ciphertext encrypts 0 or 1, with a proof created without a context.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithProof}
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyCiphertext(Ciphertext ciphertext, Proof proof) {
+        return verifyCiphertext(ciphertext, proof, null, null);
+    }
+
+    /**
+     * Encrypts a plaintext and proves that the encryptor knows it, without revealing it. For
+     * instance, a bidder of a sealed-bid auction proves knowledge of the bid, so nobody can outbid
+     * by copying someone else's encrypted bid and adding 1 to it homomorphically. Public key is
+     * enough. Supported by ElGamal and Exponential-ElGamal (keys generated with {@code primeOrder =
+     * true}), EllipticCurve-ElGamal, Paillier and Damgard-Jurik.
+     *
+     * @param plaintext the message to encrypt
+     * @param context public data bound to the proof, e.g. id of the encryptor, so that the proof
+     *     cannot be copied for another context
+     * @return the ciphertext and the proof of knowledge of the plaintext
+     */
+    public Proven<Ciphertext> encryptWithProofOfKnowledge(BigInteger plaintext, Object context) {
+        requirePublicKey("encryption");
+        Proven<CipherValue> proven =
+                cs.encryptWithProofOfKnowledge(
+                        PheUtils.normalizeInput(plaintext, cs.plaintextModulo()), context);
+        return new Proven<>(buildCiphertext(proven.value()), proven.proof());
+    }
+
+    /**
+     * Encrypts a plaintext and proves that the encryptor knows it.
+     *
+     * @param plaintext the message to encrypt
+     * @param context public data bound to the proof
+     * @return the ciphertext and the proof of knowledge of the plaintext
+     */
+    public Proven<Ciphertext> encryptWithProofOfKnowledge(long plaintext, Object context) {
+        return encryptWithProofOfKnowledge(BigInteger.valueOf(plaintext), context);
+    }
+
+    /**
+     * Encrypts a plaintext and proves that the encryptor knows it, without a context.
+     *
+     * @param plaintext the message to encrypt
+     * @return the ciphertext and the proof of knowledge of the plaintext
+     */
+    public Proven<Ciphertext> encryptWithProofOfKnowledge(long plaintext) {
+        return encryptWithProofOfKnowledge(plaintext, null);
+    }
+
+    /**
+     * Verifies that the encryptor of a ciphertext knows its plaintext without decrypting it. Public
+     * key is enough.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithProofOfKnowledge}
+     * @param context public data that the proof is expected to be bound to
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyKnowledge(Ciphertext ciphertext, Proof proof, Object context) {
+        requirePublicKeyTo("verify knowledge");
+        if (ciphertext == null) {
+            return false;
+        }
+        return cs.verifyKnowledge(ciphertext.value(), proof, context);
+    }
+
+    /**
+     * Verifies that the encryptor of a ciphertext knows its plaintext, with a proof created without
+     * a context.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithProofOfKnowledge}
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyKnowledge(Ciphertext ciphertext, Proof proof) {
+        return verifyKnowledge(ciphertext, proof, null);
+    }
+
+    /**
+     * Encrypts a choice among options as a one-hot vector, i.e. 1 for the chosen option and 0 for
+     * others, and proves that exactly one option is chosen without revealing which one. For
+     * instance, a voter votes for one of many parties. Summing slots of all ballots homomorphically
+     * counts votes of each option separately, so the number of options is not limited. Public key
+     * is enough. Supported by Exponential-ElGamal (keys generated with {@code primeOrder = true}),
+     * EllipticCurve-ElGamal, Paillier and Damgard-Jurik.
+     *
+     * @param choice index of the chosen option in {@code [0, options)}
+     * @param options number of options
+     * @param context public data bound to the proof, e.g. id of the voter
+     * @return the encrypted slots, one per option, and the proof that slots are 0 or 1 and sum to 1
+     */
+    public Proven<List<Ciphertext>> encryptOneHot(int choice, int options, Object context) {
+        requirePublicKey("encryption");
+        if (options < 1) {
+            throw new IllegalArgumentException("Number of options must be at least 1");
+        }
+        if (choice < 0 || choice >= options) {
+            throw new IllegalArgumentException("Choice must be in [0, " + options + ")");
+        }
+        if (!cs.supportsMembershipProofs()) {
+            throw new IllegalArgumentException(
+                    algorithmName
+                            + " does not support proving that a ciphertext encrypts one of given"
+                            + " values");
+        }
+
+        Proven<List<CipherValue>> proven =
+                Zkp.proveOneHot(cs, choice, options, normalizeValues(List.of(0, 1)), context);
+        List<Ciphertext> ciphertexts = new ArrayList<>(options);
+        for (CipherValue value : proven.value()) {
+            ciphertexts.add(buildCiphertext(value));
+        }
+        return new Proven<>(ciphertexts, proven.proof());
+    }
+
+    /**
+     * Verifies that encrypted slots are a one-hot vector, i.e. exactly one option is chosen,
+     * without decrypting them. Public key is enough.
+     *
+     * @param ciphertexts the encrypted slots, one per option
+     * @param proof the output of {@link #encryptOneHot}
+     * @param context public data that the proof is expected to be bound to
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyOneHot(List<Ciphertext> ciphertexts, Proof proof, Object context) {
+        requirePublicKeyTo("verify one-hot ciphertexts");
+        if (ciphertexts == null || hasNull(ciphertexts)) {
+            return false;
+        }
+        return Zkp.verifyOneHot(
+                cs,
+                ciphertexts.stream().map(Ciphertext::value).toList(),
+                proof,
+                normalizeValues(List.of(0, 1)),
+                context);
+    }
+
+    /**
+     * Encrypts a plaintext and proves that it is in {@code [low, high]}, without revealing it. For
+     * instance, an employee proves that the encrypted salary is in a sensible range, so cannot skew
+     * the average of salaries with a negative or huge value. Public key is enough. Supported by
+     * Exponential-ElGamal (keys generated with {@code primeOrder = true}), EllipticCurve-ElGamal,
+     * Paillier and Damgard-Jurik. Proof size grows with the bit length of {@code high - low}.
+     *
+     * @param plaintext the message to encrypt in {@code [low, high]}
+     * @param low lower bound of the range
+     * @param high upper bound of the range
+     * @param context public data bound to the proof, e.g. id of the employee
+     * @return the ciphertext and the proof that it encrypts a value in {@code [low, high]}
+     */
+    public Proven<Ciphertext> encryptWithRangeProof(
+            BigInteger plaintext, BigInteger low, BigInteger high, Object context) {
+        requirePublicKey("encryption");
+        List<BigInteger> values = normalizeRange(low, high);
+        if (plaintext.compareTo(low) < 0 || plaintext.compareTo(high) > 0) {
+            throw new IllegalArgumentException("Plaintext must be in [" + low + ", " + high + "]");
+        }
+        Proven<CipherValue> proven = Zkp.proveRange(cs, plaintext, low, high, values, context);
+        return new Proven<>(buildCiphertext(proven.value()), proven.proof());
+    }
+
+    /**
+     * Encrypts a plaintext and proves that it is in {@code [low, high]}.
+     *
+     * @param plaintext the message to encrypt in {@code [low, high]}
+     * @param low lower bound of the range
+     * @param high upper bound of the range
+     * @param context public data bound to the proof
+     * @return the ciphertext and the proof that it encrypts a value in {@code [low, high]}
+     */
+    public Proven<Ciphertext> encryptWithRangeProof(
+            long plaintext, long low, long high, Object context) {
+        return encryptWithRangeProof(
+                BigInteger.valueOf(plaintext),
+                BigInteger.valueOf(low),
+                BigInteger.valueOf(high),
+                context);
+    }
+
+    /**
+     * Verifies that a ciphertext encrypts a value in {@code [low, high]} without decrypting it.
+     * Public key is enough.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithRangeProof}
+     * @param low lower bound of the range
+     * @param high upper bound of the range
+     * @param context public data that the proof is expected to be bound to
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyRange(
+            Ciphertext ciphertext, Proof proof, BigInteger low, BigInteger high, Object context) {
+        requirePublicKeyTo("verify range");
+        List<BigInteger> values = normalizeRange(low, high);
+        if (ciphertext == null) {
+            return false;
+        }
+        return Zkp.verifyRange(cs, ciphertext.value(), proof, low, high, values, context);
+    }
+
+    /**
+     * Verifies that a ciphertext encrypts a value in {@code [low, high]}.
+     *
+     * @param ciphertext the encrypted message
+     * @param proof the output of {@link #encryptWithRangeProof}
+     * @param low lower bound of the range
+     * @param high upper bound of the range
+     * @param context public data that the proof is expected to be bound to
+     * @return {@code true} when the proof is valid
+     */
+    public boolean verifyRange(
+            Ciphertext ciphertext, Proof proof, long low, long high, Object context) {
+        return verifyRange(
+                ciphertext, proof, BigInteger.valueOf(low), BigInteger.valueOf(high), context);
+    }
+
+    /** Validates bounds of a range proof, and normalizes low, 0 and 1 as encrypt does. */
+    private List<BigInteger> normalizeRange(BigInteger low, BigInteger high) {
+        if (low == null || high == null) {
+            throw new IllegalArgumentException("Bounds of the range must be integers");
+        }
+        if (low.compareTo(high) > 0) {
+            throw new IllegalArgumentException(
+                    "Lower bound " + low + " must not be greater than upper bound " + high);
+        }
+        if (high.subtract(low).compareTo(cs.plaintextModulo()) >= 0) {
+            throw new IllegalArgumentException("Range must be narrower than the plaintext modulo");
+        }
+        BigInteger modulo = cs.plaintextModulo();
+        return List.of(
+                PheUtils.normalizeInput(low, modulo),
+                PheUtils.normalizeInput(BigInteger.ZERO, modulo),
+                PheUtils.normalizeInput(BigInteger.ONE, modulo));
+    }
+
+    /** Validates allowed values of a proof and normalizes them as encrypt does. */
+    private List<BigInteger> normalizeValues(List<? extends Number> values) {
+        List<? extends Number> allowed = values == null ? List.of(0, 1) : values;
+        if (allowed.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Allowed values must be a non-empty list of integers");
+        }
+        List<BigInteger> normalized = new ArrayList<>(allowed.size());
+        for (Number value : allowed) {
+            if (!isIntegral(value)) {
+                throw new IllegalArgumentException(
+                        "Allowed values must be a non-empty list of integers");
+            }
+            normalized.add(PheUtils.normalizeInput(toBigInteger(value), cs.plaintextModulo()));
+        }
+        if (new HashSet<>(normalized).size() != normalized.size()) {
+            throw new IllegalArgumentException("Allowed values must be distinct");
+        }
+        return normalized;
+    }
+
+    private void requireThresholdKey() {
+        if (cs.keys().thresholdKey() == null) {
+            throw new IllegalArgumentException(
+                    "You must have threshold key to perform partial decryption");
+        }
     }
 
     /**
@@ -739,6 +1345,631 @@ public final class LightPHE {
     }
 
     // -----------------------------------------------------------------------
+    // Encrypted k nearest neighbor search
+    // -----------------------------------------------------------------------
+
+    /**
+     * Encrypts a query vector for encrypted k nearest neighbor search. Runs on client side, e.g. a
+     * user searching a face embedding in the gallery of a server. Embeddings must be quantized to
+     * integers, e.g. by scaling and rounding. Only supported by Damgard-Geisler-Kroigaard.
+     *
+     * @param query the query vector
+     * @return the encrypted query, to be sent to the server
+     */
+    public EncryptedKnnQuery encryptKnnQuery(List<Long> query) {
+        requirePublicKey("encryption");
+        requireKnnSupport();
+        if (query == null || query.isEmpty() || hasNull(query)) {
+            throw new IllegalArgumentException("Query must be a non-empty list of integers");
+        }
+        NearestNeighbors.Query encrypted = NearestNeighbors.encryptQuery(cs, query);
+        List<Ciphertext> entries = new ArrayList<>(encrypted.query().size());
+        for (CipherValue value : encrypted.query()) {
+            entries.add(buildCiphertext(value));
+        }
+        return new EncryptedKnnQuery(entries, buildCiphertext(encrypted.norm()));
+    }
+
+    /**
+     * Finds the k nearest vectors of a database to an encrypted query by squared euclidean
+     * distance. Runs on server side and talks to the client (private key owner) through the client
+     * callable. Server learns nothing, and client learns only the indices, or the labels, of the k
+     * nearest vectors, but not the distances or the other vectors. Earlier index is returned on
+     * ties. Only supported by Damgard-Geisler-Kroigaard.
+     *
+     * @param encryptedQuery the output of {@link #encryptKnnQuery}
+     * @param database vectors of the server, in plain
+     * @param k number of nearest vectors to find
+     * @param bitLength squared distances between the query and vectors must be less than {@code
+     *     2^bitLength}, e.g. 24 for 128-dimensional embeddings of 8-bit entries
+     * @param client sends a message to the client, and returns the output of the client's {@link
+     *     #answerKnn}. Locally, it can be the client's {@code answerKnn} directly. Otherwise, wrap
+     *     your network call with it.
+     * @param labels optional labels of vectors, e.g. ids of people, or {@code null}. If set,
+     *     encrypted labels of the nearest vectors are returned as well.
+     * @return the encrypted indices, and labels if set, of the k nearest vectors from the nearest
+     *     one, to be decrypted by the client
+     */
+    public KnnResult evaluateKnn(
+            EncryptedKnnQuery encryptedQuery,
+            List<List<Long>> database,
+            int k,
+            int bitLength,
+            Function<ArgmaxMessage, List<BigInteger>> client,
+            List<Long> labels) {
+        requirePublicKey("encrypted nearest neighbor search");
+        requireKnnSupport();
+
+        if (encryptedQuery == null || encryptedQuery.query().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Encrypted query must be an output of encryptKnnQuery");
+        }
+        int dimension = encryptedQuery.query().size();
+        if (database == null || database.isEmpty()) {
+            throw new IllegalArgumentException("Database must be a non-empty list of vectors");
+        }
+        for (List<Long> vector : database) {
+            if (vector == null || vector.size() != dimension || hasNull(vector)) {
+                throw new IllegalArgumentException(
+                        "Every vector of the database must be a list of "
+                                + dimension
+                                + " integers");
+            }
+        }
+        if (k < 1 || k > database.size()) {
+            throw new IllegalArgumentException("k must be in [1, " + database.size() + "]");
+        }
+        if (labels != null && (labels.size() != database.size() || hasNull(labels))) {
+            throw new IllegalArgumentException(
+                    "Labels must be a list of integers, one for each vector");
+        }
+        if (bitLength < 1) {
+            throw new IllegalArgumentException("Bit length must be a positive integer");
+        }
+        // argmax validates that lifted values fit into the plaintext space
+        BigInteger largestNorm = BigInteger.ZERO;
+        for (List<Long> vector : database) {
+            BigInteger norm = BigInteger.ZERO;
+            for (long x : vector) {
+                norm = norm.add(BigInteger.valueOf(x).pow(2));
+            }
+            largestNorm = largestNorm.max(norm);
+        }
+        if (largestNorm.bitLength() > bitLength) {
+            throw new IllegalArgumentException(
+                    "Squared norm "
+                            + largestNorm
+                            + " of a vector in the database does not fit into "
+                            + bitLength
+                            + " bits");
+        }
+
+        NearestNeighbors.Result result =
+                NearestNeighbors.evaluateKnn(
+                        cs,
+                        new NearestNeighbors.Query(
+                                encryptedQuery.query().stream().map(Ciphertext::value).toList(),
+                                encryptedQuery.norm().value()),
+                        database,
+                        k,
+                        bitLength,
+                        client,
+                        labels);
+
+        List<Ciphertext> indices = new ArrayList<>(result.indices().size());
+        for (CipherValue value : result.indices()) {
+            indices.add(buildCiphertext(value));
+        }
+        List<Ciphertext> foundLabels = new ArrayList<>();
+        if (result.labels() != null) {
+            for (CipherValue value : result.labels()) {
+                foundLabels.add(buildCiphertext(value));
+            }
+        }
+        return new KnnResult(indices, foundLabels);
+    }
+
+    /**
+     * Finds the k nearest vectors of a database to an encrypted query, without labels.
+     *
+     * @param encryptedQuery the output of {@link #encryptKnnQuery}
+     * @param database vectors of the server, in plain
+     * @param k number of nearest vectors to find
+     * @param bitLength squared distances must be less than {@code 2^bitLength}
+     * @param client sends a message to the client, and returns its answer
+     * @return the encrypted indices of the k nearest vectors from the nearest one
+     */
+    public KnnResult evaluateKnn(
+            EncryptedKnnQuery encryptedQuery,
+            List<List<Long>> database,
+            int k,
+            int bitLength,
+            Function<ArgmaxMessage, List<BigInteger>> client) {
+        return evaluateKnn(encryptedQuery, database, k, bitLength, client, null);
+    }
+
+    /**
+     * Answers a message of the server during encrypted k nearest neighbor search. Runs on client
+     * side. Every value decrypted here is masked or shuffled, so client learns nothing but the
+     * final result. Only supported by Damgard-Geisler-Kroigaard.
+     *
+     * @param message the message of the server
+     * @return the answer, to be sent back to the server
+     */
+    public List<BigInteger> answerKnn(ArgmaxMessage message) {
+        requirePrivateKey("perform decryption");
+        requireKnnSupport();
+        return NearestNeighbors.answerKnn((DamgardGeislerKroigaard) cs, message);
+    }
+
+    /**
+     * Computes encrypted squared euclidean distances between an encrypted query and encrypted
+     * vectors. Runs on the side of an untrusted cloud storing the encrypted database of an owner,
+     * and requires the public key only. Both the query and the vectors are encrypted, so this
+     * requires the Catalano-Fiore boost for one multiplication. Cloud learns nothing, and the owner
+     * finds the nearest vectors with {@link #decryptKnn}.
+     *
+     * @param encryptedQuery the encrypted query vector
+     * @param encryptedDatabase the encrypted vectors
+     * @return one encrypted distance for each vector
+     */
+    public List<CatalanoFioreCiphertext> evaluateKnnDistances(
+            List<CatalanoFioreCiphertext> encryptedQuery,
+            List<List<CatalanoFioreCiphertext>> encryptedDatabase) {
+        requirePublicKeyTo("compute encrypted distances");
+        if (catalanoFiore == null) {
+            throw new IllegalArgumentException(
+                    "Encrypted distances between encrypted vectors require boost = \""
+                            + CatalanoFiore.BOOST_NAME
+                            + "\"");
+        }
+        if (!isEncryptedVector(encryptedQuery)) {
+            throw new IllegalArgumentException(
+                    "Encrypted query must be a non-empty list of encrypted integers");
+        }
+        if (encryptedDatabase == null || encryptedDatabase.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Encrypted database must be a non-empty list of vectors");
+        }
+        for (List<CatalanoFioreCiphertext> vector : encryptedDatabase) {
+            if (!isEncryptedVector(vector) || vector.size() != encryptedQuery.size()) {
+                throw new IllegalArgumentException(
+                        "Every vector of the database must be a list of "
+                                + encryptedQuery.size()
+                                + " encrypted integers");
+            }
+        }
+
+        List<CatalanoFioreCiphertext> distances = new ArrayList<>(encryptedDatabase.size());
+        for (List<CatalanoFioreCiphertext> vector : encryptedDatabase) {
+            CatalanoFioreCiphertext total = null;
+            for (int i = 0; i < vector.size(); i++) {
+                CatalanoFioreCiphertext difference = encryptedQuery.get(i).subtract(vector.get(i));
+                CatalanoFioreCiphertext square = difference.multiply(difference);
+                total = total == null ? square : total.add(square);
+            }
+            distances.add(total);
+        }
+        return distances;
+    }
+
+    private static boolean isEncryptedVector(List<CatalanoFioreCiphertext> vector) {
+        return vector != null
+                && !vector.isEmpty()
+                && vector.stream().allMatch(c -> c != null && !c.isMultiplied());
+    }
+
+    /**
+     * Finds the k nearest vectors from encrypted distances computed by {@link
+     * #evaluateKnnDistances}. Runs on owner side, and requires the private key.
+     *
+     * @param encryptedDistances the output of {@link #evaluateKnnDistances}
+     * @param k number of nearest vectors to find
+     * @return the indices and distances of the k nearest vectors from the nearest one. Earlier
+     *     index is returned on ties.
+     */
+    public KnnDistances decryptKnn(List<CatalanoFioreCiphertext> encryptedDistances, int k) {
+        requirePrivateKey("perform decryption");
+        if (encryptedDistances == null || encryptedDistances.isEmpty()) {
+            throw new IllegalArgumentException("Encrypted distances must be a non-empty list");
+        }
+        if (k < 1 || k > encryptedDistances.size()) {
+            throw new IllegalArgumentException(
+                    "k must be in [1, " + encryptedDistances.size() + "]");
+        }
+
+        List<BigInteger> distances = new ArrayList<>(encryptedDistances.size());
+        for (CatalanoFioreCiphertext ciphertext : encryptedDistances) {
+            distances.add(decrypt(ciphertext));
+        }
+        List<Integer> indices =
+                IntStream.range(0, distances.size())
+                        .boxed()
+                        .sorted(Comparator.comparing(distances::get))
+                        .limit(k)
+                        .toList();
+        return new KnnDistances(indices, indices.stream().map(distances::get).toList());
+    }
+
+    private void requireKnnSupport() {
+        if (algorithmName != Algorithm.DAMGARD_GEISLER_KROIGAARD) {
+            throw new IllegalArgumentException(
+                    algorithmName
+                            + " does not support encrypted nearest neighbor search."
+                            + " Use Damgard-Geisler-Kroigaard instead.");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Secure aggregation
+    // -----------------------------------------------------------------------
+
+    /**
+     * Encrypts a model update of a client for secure aggregation in federated learning. Values are
+     * quantized with the precision of this cryptosystem, and many of them are packed into a single
+     * ciphertext, so an update needs far fewer ciphertexts than its length. Public key is enough.
+     * Clients must use the same key, length, precision, maximum value and maximum number of
+     * clients. Supported by Paillier and Damgard-Jurik.
+     *
+     * @param update the model update, e.g. gradients or weights
+     * @param maxValue absolute values of the update must be at most this, e.g. the clipping bound
+     *     of gradients
+     * @param maxClients maximum number of updates to be aggregated. Slots of ciphertexts are wide
+     *     enough to sum this many updates without overflow.
+     * @return the encrypted update
+     */
+    public EncryptedUpdate encryptUpdate(
+            List<? extends Number> update, Number maxValue, int maxClients) {
+        requirePublicKey("encryption");
+        requireAggregationSupport();
+        if (update == null) {
+            throw new IllegalArgumentException("Update must be a list of numbers");
+        }
+
+        AggregationLayout layout =
+                SecureAggregation.buildLayout(
+                        update.size(), precision, maxValue, maxClients, cs.plaintextModulo());
+        List<Ciphertext> chunks = new ArrayList<>();
+        for (BigInteger plaintext : SecureAggregation.pack(update, layout)) {
+            chunks.add(buildCiphertext(cs.encrypt(plaintext)));
+        }
+        return new EncryptedUpdate(chunks, layout, 1);
+    }
+
+    /**
+     * Sums encrypted updates of clients chunk by chunk. Runs on server side, and requires the
+     * public key only. Server learns nothing about updates or their sum.
+     *
+     * @param encryptedUpdates outputs of {@link #encryptUpdate} or {@link #aggregateUpdates}
+     * @return the encrypted sum
+     */
+    public EncryptedUpdate aggregateUpdates(List<EncryptedUpdate> encryptedUpdates) {
+        requirePublicKeyTo("aggregate updates");
+        requireAggregationSupport();
+        if (encryptedUpdates == null || encryptedUpdates.isEmpty()) {
+            throw new IllegalArgumentException("Encrypted updates must be a non-empty list");
+        }
+
+        AggregationLayout layout = encryptedUpdates.get(0).layout();
+        for (EncryptedUpdate update : encryptedUpdates) {
+            if (!update.layout().equals(layout)) {
+                throw new IllegalArgumentException(
+                        "Encrypted updates must have the same layout, i.e. the same length,"
+                                + " precision, maximum value and maximum number of clients");
+            }
+        }
+        int count = encryptedUpdates.stream().mapToInt(EncryptedUpdate::count).sum();
+        if (count > layout.maxClients()) {
+            throw new IllegalArgumentException(
+                    "Sum of "
+                            + count
+                            + " updates would overflow slots packed for at most "
+                            + layout.maxClients()
+                            + " clients");
+        }
+
+        List<Ciphertext> chunks = new ArrayList<>(encryptedUpdates.get(0).chunks());
+        for (EncryptedUpdate update : encryptedUpdates.subList(1, encryptedUpdates.size())) {
+            for (int i = 0; i < chunks.size(); i++) {
+                chunks.set(i, chunks.get(i).add(update.chunks().get(i)));
+            }
+        }
+        return new EncryptedUpdate(chunks, layout, count);
+    }
+
+    /**
+     * Decrypts an encrypted sum of updates partially with the share of a shareholder, e.g. a member
+     * of a committee of clients. Shareholders decrypt sums only, never individual updates.
+     *
+     * @param encryptedSum the output of {@link #aggregateUpdates}
+     * @param prove set this to {@code true} to attach proofs of correct partial decryption. Keys
+     *     must be generated with {@code safePrimes = true}.
+     * @return one partial decryption for each chunk, to be sent to the combiner
+     */
+    public List<PartialDecryption> partialDecryptAggregate(
+            EncryptedUpdate encryptedSum, boolean prove) {
+        requireAggregationSupport();
+        List<PartialDecryption> partials = new ArrayList<>(encryptedSum.chunks().size());
+        for (Ciphertext chunk : encryptedSum.chunks()) {
+            partials.add(partialDecrypt(chunk, prove));
+        }
+        return partials;
+    }
+
+    /**
+     * Restores the sum and the mean of updates from partial decryptions of at least threshold many
+     * shareholders. Public key is enough.
+     *
+     * @param encryptedSum the output of {@link #aggregateUpdates}
+     * @param partialDecryptions outputs of {@link #partialDecryptAggregate} of shareholders
+     * @param verify set this to {@code true} to check proofs of partial decryptions, and discard
+     *     invalid or unproven ones
+     * @return the sum and the mean of updates, and the number of updates
+     */
+    public Aggregate combineAggregate(
+            EncryptedUpdate encryptedSum,
+            List<List<PartialDecryption>> partialDecryptions,
+            boolean verify) {
+        requirePublicKeyTo("combine partial decryptions");
+        requireAggregationSupport();
+        List<BigInteger> plaintexts = new ArrayList<>(encryptedSum.chunks().size());
+        for (int i = 0; i < encryptedSum.chunks().size(); i++) {
+            List<PartialDecryption> chunkPartials = new ArrayList<>(partialDecryptions.size());
+            for (List<PartialDecryption> partials : partialDecryptions) {
+                chunkPartials.add(partials.get(i));
+            }
+            plaintexts.add(
+                    cs.combinePartialDecryptions(
+                            encryptedSum.chunks().get(i).value(), chunkPartials, verify));
+        }
+        return unpackAggregate(encryptedSum, plaintexts);
+    }
+
+    /**
+     * Restores the sum and the mean of updates with the private key, if a single party holds it
+     * instead of a committee.
+     *
+     * @param encryptedSum the output of {@link #aggregateUpdates}
+     * @return the sum and the mean of updates, and the number of updates
+     */
+    public Aggregate decryptAggregate(EncryptedUpdate encryptedSum) {
+        requirePrivateKey("perform decryption");
+        requireAggregationSupport();
+        List<BigInteger> plaintexts = new ArrayList<>(encryptedSum.chunks().size());
+        for (Ciphertext chunk : encryptedSum.chunks()) {
+            plaintexts.add(cs.decrypt(chunk.value()));
+        }
+        return unpackAggregate(encryptedSum, plaintexts);
+    }
+
+    private Aggregate unpackAggregate(EncryptedUpdate encryptedSum, List<BigInteger> plaintexts) {
+        int count = encryptedSum.count();
+        List<Double> total = SecureAggregation.unpack(plaintexts, encryptedSum.layout(), count);
+        return new Aggregate(total, total.stream().map(x -> x / count).toList(), count);
+    }
+
+    private void requireAggregationSupport() {
+        if (algorithmName != Algorithm.PAILLIER && algorithmName != Algorithm.DAMGARD_JURIK) {
+            throw new IllegalArgumentException(
+                    algorithmName
+                            + " does not support secure aggregation."
+                            + " Use Paillier or Damgard-Jurik instead.");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Encrypted classification
+    // -----------------------------------------------------------------------
+
+    /**
+     * Classifies encrypted features with a private linear model, i.e. finds the class of the
+     * greatest score {@code <w_i, x> + b_i}, e.g. logistic regression or a linear SVM. Runs on
+     * server side and talks to the client (private key owner) through the client callable. Client
+     * learns only the predicted class, and server learns nothing. Only supported by
+     * Damgard-Geisler-Kroigaard.
+     *
+     * @param encryptedFeatures features encrypted by the client. Floats must be quantized to
+     *     integers, e.g. by scaling and rounding.
+     * @param weights integer weights of each class
+     * @param bitLength absolute values of scores must be less than {@code 2^bitLength}
+     * @param client sends a message to the client, and returns the output of the client's {@link
+     *     #answerArgmax}
+     * @param biases optional integer bias of each class, or {@code null}
+     * @return the encrypted index of the predicted class, to be decrypted by the client. Earlier
+     *     class is returned on ties.
+     */
+    public Ciphertext evaluateHyperplane(
+            List<Ciphertext> encryptedFeatures,
+            List<? extends List<? extends Number>> weights,
+            int bitLength,
+            Function<ArgmaxMessage, List<BigInteger>> client,
+            List<? extends Number> biases) {
+        requirePublicKey("encrypted classification");
+        requireClassifierSupport();
+        Classifiers.validateWeightsShape(weights);
+        List<? extends Number> classBiases =
+                biases != null ? biases : Collections.nCopies(weights.size(), 0);
+
+        List<List<BigInteger>> integerWeights = new ArrayList<>(weights.size());
+        for (List<? extends Number> classWeights : weights) {
+            integerWeights.add(toIntegers(classWeights));
+        }
+        List<BigInteger> integerBiases = toIntegers(classBiases);
+        if (integerBiases.size() != weights.size()) {
+            throw new IllegalArgumentException("There must be a bias for each class");
+        }
+        int features = weights.get(0).size();
+        if (encryptedFeatures == null
+                || encryptedFeatures.size() != features
+                || hasNull(encryptedFeatures)) {
+            throw new IllegalArgumentException(
+                    "Encrypted features must be a list of " + features + " ciphertexts");
+        }
+        if (bitLength < 1) {
+            throw new IllegalArgumentException("Bit length must be a positive integer");
+        }
+
+        CipherValue output =
+                Classifiers.evaluateHyperplane(
+                        cs,
+                        encryptedFeatures.stream().map(Ciphertext::value).toList(),
+                        integerWeights,
+                        integerBiases,
+                        bitLength,
+                        client);
+        return buildCiphertext(output);
+    }
+
+    /**
+     * Classifies encrypted features with a private linear model without biases.
+     *
+     * @param encryptedFeatures features encrypted by the client
+     * @param weights integer weights of each class
+     * @param bitLength absolute values of scores must be less than {@code 2^bitLength}
+     * @param client sends a message to the client, and returns its answer
+     * @return the encrypted index of the predicted class
+     */
+    public Ciphertext evaluateHyperplane(
+            List<Ciphertext> encryptedFeatures,
+            List<? extends List<? extends Number>> weights,
+            int bitLength,
+            Function<ArgmaxMessage, List<BigInteger>> client) {
+        return evaluateHyperplane(encryptedFeatures, weights, bitLength, client, null);
+    }
+
+    /**
+     * Encrypts categorical features for naive bayes classification as one-hot vectors. Runs on
+     * client side. Only supported by Damgard-Geisler-Kroigaard.
+     *
+     * @param features value of each feature in {@code [0, domain size)}
+     * @param domainSizes number of values of each feature, which the server shares as a part of its
+     *     model
+     * @return the encrypted input, to be sent to the server
+     */
+    public List<List<Ciphertext>> encryptNaiveBayesInput(
+            List<Integer> features, List<Integer> domainSizes) {
+        requirePublicKey("encryption");
+        requireClassifierSupport();
+        if (features == null
+                || domainSizes == null
+                || features.isEmpty()
+                || features.size() != domainSizes.size()) {
+            throw new IllegalArgumentException("There must be a domain size for each feature");
+        }
+        for (int j = 0; j < features.size(); j++) {
+            Integer size = domainSizes.get(j);
+            Integer feature = features.get(j);
+            if (size == null || size < 1) {
+                throw new IllegalArgumentException("Domain sizes must be positive integers");
+            }
+            if (feature == null || feature < 0 || feature >= size) {
+                throw new IllegalArgumentException(
+                        "Feature " + feature + " must be an integer in [0, " + size + ")");
+            }
+        }
+
+        List<List<Ciphertext>> encrypted = new ArrayList<>(features.size());
+        for (List<CipherValue> oneHot :
+                Classifiers.encryptNaiveBayesInput(cs, features, domainSizes)) {
+            List<Ciphertext> ciphertexts = new ArrayList<>(oneHot.size());
+            for (CipherValue value : oneHot) {
+                ciphertexts.add(buildCiphertext(value));
+            }
+            encrypted.add(ciphertexts);
+        }
+        return encrypted;
+    }
+
+    /**
+     * Classifies encrypted categorical features with a private naive bayes model, i.e. finds the
+     * class of the greatest {@code log P(c) + sum of log P(x_j | c)}. Runs on server side and talks
+     * to the client (private key owner) through the client callable. Client learns only the
+     * predicted class, and server learns nothing. Only supported by Damgard-Geisler-Kroigaard.
+     *
+     * @param encryptedInput the output of {@link #encryptNaiveBayesInput}
+     * @param priors {@code P(c)} of each class
+     * @param likelihoods {@code P(x_j = v | c)} for class c, feature j and value v, i.e. {@code
+     *     likelihoods[c][j][v]}. Probabilities must be positive, e.g. smoothed with Laplace
+     *     smoothing.
+     * @param client sends a message to the client, and returns the output of the client's {@link
+     *     #answerArgmax}
+     * @param precision number of decimal digits kept from log probabilities. Greater values need
+     *     more bits for scores.
+     * @return the encrypted index of the predicted class, to be decrypted by the client. Earlier
+     *     class is returned on ties.
+     */
+    public Ciphertext evaluateNaiveBayes(
+            List<List<Ciphertext>> encryptedInput,
+            List<? extends Number> priors,
+            List<? extends List<? extends List<? extends Number>>> likelihoods,
+            Function<ArgmaxMessage, List<BigInteger>> client,
+            int precision) {
+        requirePublicKey("encrypted classification");
+        requireClassifierSupport();
+        Classifiers.validateLikelihoodsShape(likelihoods);
+        if (priors == null || priors.size() != likelihoods.size()) {
+            throw new IllegalArgumentException("There must be a prior for each class");
+        }
+        List<Integer> domainSizes = likelihoods.get(0).stream().map(List::size).toList();
+        if (encryptedInput == null
+                || !encryptedInput.stream().map(List::size).toList().equals(domainSizes)
+                || encryptedInput.stream().anyMatch(LightPHE::hasNull)) {
+            throw new IllegalArgumentException(
+                    "Encrypted input must be one-hot vectors of domain sizes " + domainSizes);
+        }
+        if (precision < 0) {
+            throw new IllegalArgumentException("Precision must be a non-negative integer");
+        }
+
+        Classifiers.QuantizedNaiveBayes model =
+                Classifiers.quantizeNaiveBayes(priors, likelihoods, precision);
+        List<List<CipherValue>> input = new ArrayList<>(encryptedInput.size());
+        for (List<Ciphertext> oneHot : encryptedInput) {
+            input.add(oneHot.stream().map(Ciphertext::value).toList());
+        }
+        return buildCiphertext(Classifiers.evaluateNaiveBayes(cs, input, model, client));
+    }
+
+    /**
+     * Classifies encrypted categorical features with a private naive bayes model, keeping 3 decimal
+     * digits of log probabilities.
+     *
+     * @param encryptedInput the output of {@link #encryptNaiveBayesInput}
+     * @param priors {@code P(c)} of each class
+     * @param likelihoods {@code P(x_j = v | c)}, i.e. {@code likelihoods[c][j][v]}
+     * @param client sends a message to the client, and returns its answer
+     * @return the encrypted index of the predicted class
+     */
+    public Ciphertext evaluateNaiveBayes(
+            List<List<Ciphertext>> encryptedInput,
+            List<? extends Number> priors,
+            List<? extends List<? extends List<? extends Number>>> likelihoods,
+            Function<ArgmaxMessage, List<BigInteger>> client) {
+        return evaluateNaiveBayes(encryptedInput, priors, likelihoods, client, 3);
+    }
+
+    private void requireClassifierSupport() {
+        if (algorithmName != Algorithm.DAMGARD_GEISLER_KROIGAARD) {
+            throw new IllegalArgumentException(
+                    algorithmName
+                            + " does not support encrypted classification."
+                            + " Use Damgard-Geisler-Kroigaard instead.");
+        }
+    }
+
+    private static List<BigInteger> toIntegers(List<? extends Number> values) {
+        List<BigInteger> integers = new ArrayList<>(values.size());
+        for (Number value : values) {
+            if (!isIntegral(value)) {
+                throw new IllegalArgumentException(
+                        "Weights and biases must be integers. Quantize them first.");
+            }
+            integers.add(toBigInteger(value));
+        }
+        return integers;
+    }
+
+    // -----------------------------------------------------------------------
     // Ciphertext utilities
     // -----------------------------------------------------------------------
 
@@ -993,7 +2224,16 @@ public final class LightPHE {
         return new BigDecimal(value).compareTo(new BigDecimal(modulo)) > 0;
     }
 
+    /** Null-safe even for immutable lists, whose contains(null) throws. */
+    private static boolean hasNull(List<?> items) {
+        return items.stream().anyMatch(Objects::isNull);
+    }
+
     private static boolean isIntegral(Number value) {
+        return value != null && isIntegralType(value);
+    }
+
+    private static boolean isIntegralType(Number value) {
         return value instanceof Integer
                 || value instanceof Long
                 || value instanceof Short
