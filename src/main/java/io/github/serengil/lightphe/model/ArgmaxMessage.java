@@ -9,7 +9,8 @@ import java.util.Objects;
  *
  * <p>Java counterpart of the {@code {"type": ..., "payload": ...}} dictionaries of the Python
  * library. The protocol needs a few round trips per value, so the server talks to the client
- * through a callable that sends one of these messages and returns the client's answer. Each message
+ * through a callable that sends one of these messages and returns the client's answer. Encrypted k
+ * nearest neighbor search sends {@link Equality} messages through the same callable. Each message
  * reports its Python {@link #type()} name, which is handy when it has to be serialised for a
  * network call.
  */
@@ -75,6 +76,25 @@ public sealed interface ArgmaxMessage {
         @Override
         public String type() {
             return "products";
+        }
+    }
+
+    /**
+     * Asks the client which of the blinded differences encrypt zero, during encrypted k nearest
+     * neighbor search. Answered by {@code answerKnn}, not by {@code answerArgmax}.
+     *
+     * @param payload the blinded differences in a random order
+     */
+    record Equality(List<BigInteger> payload) implements ArgmaxMessage {
+
+        /** Creates the message, copying the payload defensively. */
+        public Equality {
+            payload = List.copyOf(payload);
+        }
+
+        @Override
+        public String type() {
+            return "equality";
         }
     }
 }
