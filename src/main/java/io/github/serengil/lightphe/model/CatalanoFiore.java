@@ -71,26 +71,37 @@ public final class CatalanoFiore {
             "its decryption solves discrete logarithm, which is"
                     + " infeasible for the uniformly random values the transform encrypts";
 
+    private static final String NOISE_BUDGET_REASON =
+            "multiplying with uniformly random constants exceeds its noise budget";
+
     private static final String NATIVE_MULTIPLICATION_REASON =
             "it already supports one multiplication natively";
 
     /** Reasons of algorithms that cannot be upgraded. */
     private static final Map<Algorithm, String> UNSUPPORTED_REASONS =
-            Map.of(
-                    Algorithm.EXPONENTIAL_EL_GAMAL, DISCRETE_LOG_REASON,
-                    Algorithm.ELLIPTIC_CURVE_EL_GAMAL, DISCRETE_LOG_REASON,
-                    Algorithm.OKAMOTO_UCHIYAMA,
+            Map.ofEntries(
+                    Map.entry(Algorithm.EXPONENTIAL_EL_GAMAL, DISCRETE_LOG_REASON),
+                    Map.entry(Algorithm.ELLIPTIC_CURVE_EL_GAMAL, DISCRETE_LOG_REASON),
+                    Map.entry(
+                            Algorithm.OKAMOTO_UCHIYAMA,
                             "its plaintext modulus p is secret, so the encryptor cannot"
-                                    + " compute m - b mod p",
-                    Algorithm.REGEV,
-                            "multiplying with uniformly random constants exceeds its noise budget",
-                    Algorithm.GOLDWASSER_MICALI,
+                                    + " compute m - b mod p"),
+                    Map.entry(Algorithm.REGEV, NOISE_BUDGET_REASON),
+                    Map.entry(Algorithm.LYUBASHEVSKY_PEIKERT_REGEV, NOISE_BUDGET_REASON),
+                    Map.entry(
+                            Algorithm.ML_KEM,
+                            "it is homomorphic with respect to xor only, without addition"),
+                    Map.entry(
+                            Algorithm.GOLDWASSER_MICALI,
                             "it encrypts integers bit by bit and supports xor only,"
-                                    + " without multiplication with a constant",
-                    Algorithm.BONEH_GOH_NISSIM, NATIVE_MULTIPLICATION_REASON,
-                    Algorithm.BRAKERSKI_VAIKUNTANATHAN, NATIVE_MULTIPLICATION_REASON,
-                    Algorithm.FREEMAN_BONEH_GOH_NISSIM, NATIVE_MULTIPLICATION_REASON,
-                    Algorithm.GENTRY_HALEVI_VAIKUNTANATHAN, NATIVE_MULTIPLICATION_REASON);
+                                    + " without multiplication with a constant"),
+                    Map.entry(Algorithm.BONEH_GOH_NISSIM, NATIVE_MULTIPLICATION_REASON),
+                    Map.entry(Algorithm.BRAKERSKI_VAIKUNTANATHAN, NATIVE_MULTIPLICATION_REASON),
+                    Map.entry(Algorithm.FREEMAN_BONEH_GOH_NISSIM, NATIVE_MULTIPLICATION_REASON),
+                    Map.entry(Algorithm.GENTRY_HALEVI_VAIKUNTANATHAN, NATIVE_MULTIPLICATION_REASON),
+                    Map.entry(
+                            Algorithm.GENTRY_SAHAI_WATERS,
+                            "it already supports multiplications of bits natively"));
 
     private final Homomorphic cs;
     private final Homomorphic publicCs;
