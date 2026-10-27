@@ -34,12 +34,14 @@ public final class CryptosystemFactory {
      * @param form elliptic curve form, only used by elliptic curve ElGamal and Camenisch-Shoup
      * @param curve elliptic curve name, only used by elliptic curve ElGamal and Camenisch-Shoup
      * @param plaintextLimit upper bound for plaintext values, only used by Benaloh,
-     *     Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim and
-     *     Gentry-Halevi-Vaikuntanathan
+     *     Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim,
+     *     Gentry-Halevi-Vaikuntanathan and Lyubashevsky-Peikert-Regev
      * @param maxTries maximum attempts to generate keys; RSA, Benaloh, Naccache-Stern,
      *     Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert, Castagnos-Laguillaumie,
      *     Damgard-Geisler-Kroigaard, Bresson-Catalano-Pointcheval and Camenisch-Shoup need multiple
      *     attempts, and the other algorithms ignore it
+     * @param primeOrder picks the generator of a known prime order while generating keys of ElGamal
+     *     or exponential ElGamal, which threshold decryption and zero-knowledge proofs require
      */
     public record Options(
             Keys keys,
@@ -47,7 +49,28 @@ public final class CryptosystemFactory {
             String form,
             String curve,
             BigInteger plaintextLimit,
-            int maxTries) {
+            int maxTries,
+            boolean primeOrder) {
+
+        /**
+         * Returns options generating ElGamal keys with a generator of an unknown order.
+         *
+         * @param keys an existing private-public key pair, or {@code null} to generate one
+         * @param keySize key size in bits, or {@code null} for the algorithm's default
+         * @param form elliptic curve form
+         * @param curve elliptic curve name
+         * @param plaintextLimit upper bound for plaintext values
+         * @param maxTries maximum attempts to generate keys
+         */
+        public Options(
+                Keys keys,
+                Integer keySize,
+                String form,
+                String curve,
+                BigInteger plaintextLimit,
+                int maxTries) {
+            this(keys, keySize, form, curve, plaintextLimit, maxTries, false);
+        }
 
         /**
          * Returns options carrying nothing but an existing key pair.
@@ -87,8 +110,8 @@ public final class CryptosystemFactory {
 
         return switch (algorithm) {
             case RSA -> new RSA(keys, keySize, maxTries);
-            case EL_GAMAL -> new ElGamal(keys, false, keySize);
-            case EXPONENTIAL_EL_GAMAL -> new ElGamal(keys, true, keySize);
+            case EL_GAMAL -> new ElGamal(keys, false, keySize, options.primeOrder());
+            case EXPONENTIAL_EL_GAMAL -> new ElGamal(keys, true, keySize, options.primeOrder());
             case ELLIPTIC_CURVE_EL_GAMAL ->
                     new EllipticCurveElGamal(keys, keySize, options.form(), options.curve());
             case PAILLIER -> new Paillier(keys, keySize);
@@ -116,6 +139,10 @@ public final class CryptosystemFactory {
                     new FreemanBonehGohNissim(keys, keySize, options.plaintextLimit());
             case GENTRY_HALEVI_VAIKUNTANATHAN ->
                     new GentryHaleviVaikuntanathan(keys, keySize, options.plaintextLimit());
+            case LYUBASHEVSKY_PEIKERT_REGEV ->
+                    new LyubashevskyPeikertRegev(keys, keySize, options.plaintextLimit());
+            case ML_KEM -> new MLKEM(keys, keySize);
+            case GENTRY_SAHAI_WATERS -> new GentrySahaiWaters(keys, keySize);
         };
     }
 
@@ -151,15 +178,19 @@ public final class CryptosystemFactory {
             case BRAKERSKI_VAIKUNTANATHAN -> BrakerskiVaikuntanathan.REQUIRED_KEYS;
             case FREEMAN_BONEH_GOH_NISSIM -> FreemanBonehGohNissim.REQUIRED_KEYS;
             case GENTRY_HALEVI_VAIKUNTANATHAN -> GentryHaleviVaikuntanathan.REQUIRED_KEYS;
+            case LYUBASHEVSKY_PEIKERT_REGEV -> LyubashevskyPeikertRegev.REQUIRED_KEYS;
+            case ML_KEM -> MLKEM.REQUIRED_KEYS;
+            case GENTRY_SAHAI_WATERS -> GentrySahaiWaters.REQUIRED_KEYS;
         };
     }
 
     /**
      * Rejects real numbers for the algorithms that support integers only.
      *
-     * <p>Joye-Libert cannot invert powers of 10 in its plaintext space, and the lattice and
-     * discrete logarithm based schemes cannot fit values scaled by powers of 10 into their small
-     * plaintext space or noise budget.
+     * <p>Joye-Libert cannot invert powers of 10 in its plaintext space, the lattice and discrete
+     * logarithm based schemes cannot fit values scaled by powers of 10 into their small plaintext
+     * space or noise budget, and ML-KEM and Gentry-Sahai-Waters are homomorphic with respect to
+     * boolean operations only.
      *
      * @param algorithm the algorithm
      * @throws IllegalArgumentException when the algorithm does not support floats
@@ -187,6 +218,10 @@ public final class CryptosystemFactory {
                     case FREEMAN_BONEH_GOH_NISSIM -> FreemanBonehGohNissim.FLOAT_NOT_SUPPORTED_MSG;
                     case GENTRY_HALEVI_VAIKUNTANATHAN ->
                             GentryHaleviVaikuntanathan.FLOAT_NOT_SUPPORTED_MSG;
+                    case LYUBASHEVSKY_PEIKERT_REGEV ->
+                            LyubashevskyPeikertRegev.FLOAT_NOT_SUPPORTED_MSG;
+                    case ML_KEM -> MLKEM.FLOAT_NOT_SUPPORTED_MSG;
+                    case GENTRY_SAHAI_WATERS -> GentrySahaiWaters.FLOAT_NOT_SUPPORTED_MSG;
                     default -> null;
                 };
         if (message != null) {
