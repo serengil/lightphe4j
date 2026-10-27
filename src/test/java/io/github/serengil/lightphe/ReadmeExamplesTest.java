@@ -5,14 +5,24 @@ import static org.assertj.core.api.Assertions.within;
 
 import io.github.serengil.lightphe.ecc.curves.CurveForm;
 import io.github.serengil.lightphe.ecc.curves.CurveRegistry;
+import io.github.serengil.lightphe.model.Aggregate;
+import io.github.serengil.lightphe.model.CatalanoFioreCiphertext;
 import io.github.serengil.lightphe.model.Ciphertext;
 import io.github.serengil.lightphe.model.DecisionTree;
+import io.github.serengil.lightphe.model.EncryptedKnnQuery;
 import io.github.serengil.lightphe.model.EncryptedTensor;
+import io.github.serengil.lightphe.model.EncryptedUpdate;
+import io.github.serengil.lightphe.model.Keys;
+import io.github.serengil.lightphe.model.KnnResult;
+import io.github.serengil.lightphe.model.PartialDecryption;
+import io.github.serengil.lightphe.model.Proven;
 import java.math.BigInteger;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.DoubleBinaryOperator;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -175,6 +185,228 @@ class ReadmeExamplesTest {
         Ciphertext sum = cloud.encrypt(17).add(cloud.encrypt(21));
         assertThat(cloud.cs().keys().hasPrivateKey()).isFalse();
         assertThat(onPrem.decrypt(sum)).isEqualTo(BigInteger.valueOf(38));
+    }
+
+    @Test
+    @DisplayName("README: hyperplane and naive Bayes classifiers")
+    void classifiers() {
+        LightPHE clientCs =
+                LightPHE.builder().algorithmName("Damgard-Geisler-Kroigaard").keySize(512).build();
+        List<Ciphertext> encryptedFeatures =
+                Stream.of(85L, 20L, 6L, 0L).map(clientCs::encrypt).toList();
+
+        LightPHE serverCs =
+                LightPHE.builder()
+                        .algorithmName("Damgard-Geisler-Kroigaard")
+                        .keys(Keys.of(clientCs.cs().keys().publicKey(), null))
+                        .build();
+        List<List<Long>> weights =
+                List.of(List.of(0L, 0L, 0L, 0L), List.of(42L, -65L, 310L, -900L));
+        List<Long> biases = List.of(0L, -1200L);
+        Ciphertext encryptedClass =
+                serverCs.evaluateHyperplane(
+                        encryptedFeatures, weights, 16, clientCs::answerArgmax, biases);
+        assertThat(clientCs.decrypt(encryptedClass)).isEqualTo(BigInteger.ONE);
+
+        List<List<Ciphertext>> encryptedSymptoms =
+                clientCs.encryptNaiveBayesInput(List.of(1, 1, 1), List.of(2, 3, 2));
+        List<Double> priors = List.of(0.36, 0.36, 0.28);
+        List<List<List<Double>>> likelihoods =
+                List.of(
+                        List.of(
+                                List.of(0.71, 0.29),
+                                List.of(0.12, 0.25, 0.63),
+                                List.of(0.71, 0.29)),
+                        List.of(
+                                List.of(0.29, 0.71),
+                                List.of(0.12, 0.63, 0.25),
+                                List.of(0.29, 0.71)),
+                        List.of(
+                                List.of(0.83, 0.17),
+                                List.of(0.57, 0.29, 0.14),
+                                List.of(0.67, 0.33)));
+        Ciphertext diagnosis =
+                serverCs.evaluateNaiveBayes(
+                        encryptedSymptoms, priors, likelihoods, clientCs::answerArgmax);
+        assertThat(clientCs.decrypt(diagnosis)).isEqualTo(BigInteger.ONE);
+    }
+
+    @Test
+    @DisplayName("README: encrypted nearest neighbor search")
+    void nearestNeighbors() {
+        LightPHE clientCs =
+                LightPHE.builder().algorithmName("Damgard-Geisler-Kroigaard").keySize(512).build();
+        EncryptedKnnQuery encryptedQuery = clientCs.encryptKnnQuery(List.of(12L, -7L, 33L, 5L));
+        LightPHE serverCs =
+                LightPHE.builder()
+                        .algorithmName("Damgard-Geisler-Kroigaard")
+                        .keys(Keys.of(clientCs.cs().keys().publicKey(), null))
+                        .build();
+        List<List<Long>> gallery =
+                List.of(
+                        List.of(10L, -5L, 30L, 4L),
+                        List.of(-40L, 22L, 1L, 9L),
+                        List.of(13L, -8L, 35L, 6L));
+        List<Long> people = List.of(101L, 102L, 103L);
+        KnnResult result =
+                serverCs.evaluateKnn(encryptedQuery, gallery, 2, 16, clientCs::answerKnn, people);
+        assertThat(result.labels().stream().map(clientCs::decrypt).toList())
+                .containsExactly(BigInteger.valueOf(103), BigInteger.valueOf(101));
+
+        LightPHE ownerCs =
+                LightPHE.builder()
+                        .algorithmName("Paillier")
+                        .keySize(256)
+                        .boost("Catalano-Fiore")
+                        .build();
+        List<List<CatalanoFioreCiphertext>> encryptedGallery =
+                gallery.stream()
+                        .map(vector -> vector.stream().map(ownerCs::encryptBoosted).toList())
+                        .toList();
+        List<CatalanoFioreCiphertext> query =
+                Stream.of(12L, -7L, 33L, 5L).map(ownerCs::encryptBoosted).toList();
+        LightPHE cloudCs =
+                LightPHE.builder()
+                        .algorithmName("Paillier")
+                        .keys(Keys.of(ownerCs.cs().keys().publicKey(), null))
+                        .boost("Catalano-Fiore")
+                        .build();
+        List<CatalanoFioreCiphertext> encryptedDistances =
+                cloudCs.evaluateKnnDistances(query, encryptedGallery);
+        assertThat(ownerCs.decryptKnn(encryptedDistances, 2).indices()).containsExactly(2, 0);
+    }
+
+    @Test
+    @DisplayName("README: threshold decryption and secure aggregation")
+    void thresholdDecryption(@TempDir Path tmp) {
+        LightPHE dealerCs = LightPHE.builder().algorithmName("Paillier").keySize(128).build();
+        List<Keys> shareKeys = dealerCs.generateThresholdKeys(3, 5);
+        Path publicFile = tmp.resolve("public.txt");
+        dealerCs.exportKeys(publicFile, true);
+        List<LightPHE> shareholders =
+                shareKeys.stream()
+                        .map(
+                                keys ->
+                                        LightPHE.builder()
+                                                .algorithmName("Paillier")
+                                                .keys(keys)
+                                                .build())
+                        .toList();
+        LightPHE publicCs =
+                LightPHE.builder().algorithmName("Paillier").keyFile(publicFile).build();
+        Ciphertext c = publicCs.encrypt(100).add(publicCs.encrypt(50));
+        List<PartialDecryption> partials =
+                Stream.of(0, 2, 4).map(i -> shareholders.get(i).partialDecrypt(c)).toList();
+        assertThat(publicCs.combinePartialDecryptions(c, partials))
+                .isEqualTo(BigInteger.valueOf(150));
+
+        LightPHE committeeDealer =
+                LightPHE.builder().algorithmName("Paillier").keySize(256).safePrimes(true).build();
+        List<LightPHE> committee =
+                committeeDealer.generateThresholdKeys(3, 5).stream()
+                        .map(
+                                keys ->
+                                        LightPHE.builder()
+                                                .algorithmName("Paillier")
+                                                .keys(keys)
+                                                .build())
+                        .toList();
+        Keys publicKey = Keys.of(committeeDealer.cs().keys().publicKey(), null);
+        LightPHE clientCs = LightPHE.builder().algorithmName("Paillier").keys(publicKey).build();
+        List<List<Double>> updates =
+                List.of(
+                        List.of(0.12, -0.53, 0.98),
+                        List.of(0.33, 0.21, -0.47),
+                        List.of(-0.25, 0.08, 0.61));
+        List<EncryptedUpdate> encryptedUpdates =
+                updates.stream().map(update -> clientCs.encryptUpdate(update, 1, 100)).toList();
+        LightPHE serverCs = LightPHE.builder().algorithmName("Paillier").keys(publicKey).build();
+        EncryptedUpdate encryptedSum = serverCs.aggregateUpdates(encryptedUpdates);
+        List<List<PartialDecryption>> aggregatePartials =
+                committee.subList(0, 3).stream()
+                        .map(member -> member.partialDecryptAggregate(encryptedSum, true))
+                        .toList();
+        Aggregate result = serverCs.combineAggregate(encryptedSum, aggregatePartials, true);
+        assertThat(result.mean().get(1)).isCloseTo(-0.08, within(1e-9));
+    }
+
+    @Test
+    @DisplayName("README: zero-knowledge proofs and e-voting")
+    void zeroKnowledgeProofs() {
+        LightPHE cs =
+                LightPHE.builder()
+                        .algorithmName("Exponential-ElGamal")
+                        .keySize(128)
+                        .primeOrder(true)
+                        .build();
+        Ciphertext c = cs.encrypt(17).add(cs.encrypt(25));
+        Proven<BigInteger> decryption = cs.decryptWithProof(c);
+        assertThat(cs.verifyDecryption(c, decryption.value(), decryption.proof())).isTrue();
+        assertThat(
+                        cs.verifyDecryption(
+                                c, decryption.value().add(BigInteger.ONE), decryption.proof()))
+                .isFalse();
+
+        LightPHE paillier = LightPHE.builder().algorithmName("Paillier").keySize(128).build();
+        Proven<Ciphertext> alice = paillier.encryptWithProofOfKnowledge(950, "alice");
+        assertThat(paillier.verifyKnowledge(alice.value(), alice.proof(), "alice")).isTrue();
+        Ciphertext malloryBid = alice.value().add(paillier.encrypt(1));
+        assertThat(paillier.verifyKnowledge(malloryBid, alice.proof(), "mallory")).isFalse();
+
+        List<Integer> stars = List.of(1, 2, 3, 4, 5);
+        Proven<Ciphertext> rating = paillier.encryptWithProof(4, stars, "customer-42");
+        assertThat(paillier.verifyCiphertext(rating.value(), rating.proof(), stars, "customer-42"))
+                .isTrue();
+
+        Proven<Ciphertext> salary = paillier.encryptWithRangeProof(85000, 0, 500000, "alice");
+        assertThat(paillier.verifyRange(salary.value(), salary.proof(), 0, 500000, "alice"))
+                .isTrue();
+        assertThat(paillier.verifyRange(salary.value(), salary.proof(), 0, 50000, "alice"))
+                .isFalse();
+
+        List<Long> values = List.of(1L, 100L, 10000L);
+        Proven<Ciphertext> red1 = paillier.encryptWithProof(values.get(0), values, "alice");
+        Proven<Ciphertext> blue = paillier.encryptWithProof(values.get(2), values, "bob");
+        Proven<Ciphertext> red2 = paillier.encryptWithProof(values.get(0), values, "carol");
+        Ciphertext tally = red1.value().add(blue.value()).add(red2.value());
+        assertThat(paillier.decryptWithProof(tally).value()).isEqualTo(BigInteger.valueOf(10002));
+
+        Proven<List<Ciphertext>> aliceBallot = cs.encryptOneHot(0, 4, "alice");
+        Proven<List<Ciphertext>> bobBallot = cs.encryptOneHot(2, 4, "bob");
+        assertThat(cs.verifyOneHot(aliceBallot.value(), aliceBallot.proof(), "alice")).isTrue();
+        List<BigInteger> votes = new ArrayList<>();
+        for (int k = 0; k < 4; k++) {
+            Ciphertext count = aliceBallot.value().get(k).add(bobBallot.value().get(k));
+            votes.add(cs.decryptWithProof(count).value());
+        }
+        assertThat(votes)
+                .containsExactly(BigInteger.ONE, BigInteger.ZERO, BigInteger.ONE, BigInteger.ZERO);
+    }
+
+    @Test
+    @DisplayName("README: new post-quantum algorithms")
+    void postQuantum() {
+        LightPHE lpr =
+                LightPHE.builder().algorithmName("Lyubashevsky-Peikert-Regev").keySize(64).build();
+        assertThat(lpr.decrypt(lpr.encrypt(1500).add(lpr.encrypt(2500))))
+                .isEqualTo(BigInteger.valueOf(4000));
+
+        LightPHE mlKem = LightPHE.builder().algorithmName("ML-KEM").build();
+        BigInteger m1 =
+                new BigInteger(
+                        "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 16);
+        BigInteger m2 =
+                new BigInteger(
+                        "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321", 16);
+        assertThat(mlKem.decrypt(mlKem.encrypt(m1).xor(mlKem.encrypt(m2)))).isEqualTo(m1.xor(m2));
+
+        LightPHE gsw = LightPHE.builder().algorithmName("Gentry-Sahai-Waters").keySize(64).build();
+        Ciphertext a = gsw.encrypt(1);
+        Ciphertext b = gsw.encrypt(1);
+        Ciphertext c = gsw.encrypt(0);
+        Ciphertext d = gsw.encrypt(1);
+        assertThat(gsw.decrypt(a.and(b).xor(a.and(c)).xor(b.and(c)))).isEqualTo(BigInteger.ONE);
+        assertThat(gsw.decrypt(a.and(b).and(c.and(d)))).isEqualTo(BigInteger.ZERO);
     }
 
     private static List<Double> elementWise(
