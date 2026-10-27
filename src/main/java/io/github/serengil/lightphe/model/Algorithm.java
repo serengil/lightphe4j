@@ -75,7 +75,16 @@ public enum Algorithm {
     FREEMAN_BONEH_GOH_NISSIM("Freeman-Boneh-Goh-Nissim"),
 
     /** BGN-type scheme from learning with errors; for learning purposes only. */
-    GENTRY_HALEVI_VAIKUNTANATHAN("Gentry-Halevi-Vaikuntanathan");
+    GENTRY_HALEVI_VAIKUNTANATHAN("Gentry-Halevi-Vaikuntanathan"),
+
+    /** Regev over a polynomial ring, additively homomorphic and quantum resistant. */
+    LYUBASHEVSKY_PEIKERT_REGEV("Lyubashevsky-Peikert-Regev"),
+
+    /** K-PKE of ML-KEM (FIPS 203), homomorphic with respect to the exclusive or of 256 bits. */
+    ML_KEM("ML-KEM"),
+
+    /** Encrypts bits, homomorphic with respect to the exclusive or and multiple ands. */
+    GENTRY_SAHAI_WATERS("Gentry-Sahai-Waters");
 
     private final String algorithmName;
 
