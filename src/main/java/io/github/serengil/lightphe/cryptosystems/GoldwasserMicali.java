@@ -141,7 +141,7 @@ public final class GoldwasserMicali extends AbstractHomomorphic {
 
     @Override
     public CipherValue encrypt(BigInteger plaintext) {
-        return encrypt(plaintext, null);
+        return encrypt(plaintext, (List<BigInteger>) null);
     }
 
     /**

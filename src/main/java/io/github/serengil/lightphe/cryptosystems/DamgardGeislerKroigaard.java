@@ -537,7 +537,10 @@ public final class DamgardGeislerKroigaard extends AbstractHomomorphic {
                     encryptValue(bits.get(0).multiply(bits.get(1))));
         }
 
-        ArgmaxMessage.Products products = (ArgmaxMessage.Products) message;
+        if (!(message instanceof ArgmaxMessage.Products products)) {
+            throw new IllegalArgumentException(
+                    "Unknown message type " + message.type() + " of encrypted argmax");
+        }
         BigInteger maskedBit = decryptValue(products.maskedBit());
         List<BigInteger> answer = new ArrayList<>(products.maskedFactors().size());
         for (BigInteger factor : products.maskedFactors()) {
