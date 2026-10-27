@@ -27,7 +27,8 @@ and somewhat homomorphic encryption schemes such as
 [`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
 `Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`, `Damgard-Geisler-Kroigaard`,
 `Bresson-Catalano-Pointcheval`, `Camenisch-Shoup`, `Elliptic Curve Paillier`, `Regev`,
-`Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan`. It also
+`Lyubashevsky-Peikert-Regev`, `ML-KEM`, `Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`,
+`Gentry-Halevi-Vaikuntanathan`, `Gentry-Sahai-Waters`. It also
 supports [`Catalano-Fiore`](#adding-multiplication-support-to-additive-algorithms) transform to add
 one multiplication to additively homomorphic ones.
 
@@ -74,31 +75,34 @@ import io.github.serengil.lightphe.LightPHE;
 
 ## Summary of homomorphic features of different cryptosystems
 
-| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation | Secure<br>Comparison | Encrypted<br>Argmax |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Exponential ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Elliptic Curve ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Elliptic Curve Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Damgard-Jurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Naccache-Stern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Okamoto-Uchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Joye-Libert | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Castagnos-Laguillaumie | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Damgard-Geisler-Kroigaard | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Bresson-Catalano-Pointcheval | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Camenisch-Shoup | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Ishai-Paskin | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Regev | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Goldwasser-Micali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Sander-Young-Yung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Freeman-Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Brakerski-Vaikuntanathan | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Gentry-Halevi-Vaikuntanathan | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation | Secure<br>Comparison | Encrypted<br>Argmax | Threshold<br>Decryption | Zero-Knowledge<br>Proofs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Exponential ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Elliptic Curve ElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Elliptic Curve Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Damgard-Jurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Naccache-Stern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Okamoto-Uchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Joye-Libert | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Castagnos-Laguillaumie | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Damgard-Geisler-Kroigaard | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Bresson-Catalano-Pointcheval | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Camenisch-Shoup | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Ishai-Paskin | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Regev | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Lyubashevsky-Peikert-Regev | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ML-KEM | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Goldwasser-Micali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Sander-Young-Yung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Freeman-Boneh-Goh-Nissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Brakerski-Vaikuntanathan | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Gentry-Halevi-Vaikuntanathan | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Gentry-Sahai-Waters | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 1️⃣ Boneh-Goh-Nissim, Freeman-Boneh-Goh-Nissim, Brakerski-Vaikuntanathan and
 Gentry-Halevi-Vaikuntanathan support one multiplication natively. Most additively homomorphic
@@ -133,9 +137,12 @@ String[] algorithms = {
     "Camenisch-Shoup",
     "EllipticCurve-Paillier",
     "Regev",
+    "Lyubashevsky-Peikert-Regev",
+    "ML-KEM",
     "Brakerski-Vaikuntanathan",
     "Freeman-Boneh-Goh-Nissim",
     "Gentry-Halevi-Vaikuntanathan",
+    "Gentry-Sahai-Waters",
 };
 
 LightPHE cs = LightPHE.builder()
@@ -150,13 +157,15 @@ The builder carries every optional parameter:
 | `algorithmName(String)` | which cryptosystem to build (required) |
 | `keys(Keys)` | an existing private-public key pair |
 | `keyFile(Path)` | load a previously exported key pair from disk |
-| `keySize(Integer)` | key size in bits, defaulting to 1024. For Regev it is the lattice dimension, for Brakerski-Vaikuntanathan the ring degree, for Freeman-Boneh-Goh-Nissim the bit length of the field size, and for Gentry-Halevi-Vaikuntanathan the lattice dimension in [2, 8] |
+| `keySize(Integer)` | key size in bits, defaulting to 1024. For Regev it is the lattice dimension, for Brakerski-Vaikuntanathan, Lyubashevsky-Peikert-Regev and Gentry-Sahai-Waters the ring degree, for ML-KEM the parameter set (512, 768 or 1024), for Freeman-Boneh-Goh-Nissim the bit length of the field size, and for Gentry-Halevi-Vaikuntanathan the lattice dimension in [2, 8] |
 | `precision(int)` | digits kept after the decimal point in tensor operations, defaulting to 5 |
 | `form(String)` | elliptic curve form: `weierstrass` (default), `edwards` or `koblitz`. Camenisch-Shoup uses it for verifiable encryption |
 | `curve(String)` | elliptic curve name, e.g. `secp256k1`, `ed25519`, `k163`. Camenisch-Shoup uses it for verifiable encryption |
-| `plaintextLimit(BigInteger)` | upper bound for plaintext values (Benaloh, Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim, Gentry-Halevi-Vaikuntanathan) |
+| `plaintextLimit(BigInteger)` | upper bound for plaintext values (Benaloh, Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim, Gentry-Halevi-Vaikuntanathan, Lyubashevsky-Peikert-Regev) |
 | `maxTries(int)` | key generation attempts, defaulting to 10000 |
 | `boost(String)` | upgrades the algorithm with a transform; `Catalano-Fiore` adds one multiplication to additively homomorphic algorithms |
+| `primeOrder(boolean)` | picks the generator of a known prime order while generating ElGamal and Exponential ElGamal keys, which threshold decryption and zero-knowledge proofs require |
+| `safePrimes(boolean)` | generates the Paillier or Damgard-Jurik modulus as a product of two safe primes, which proofs of partial decryption require |
 
 ## Homomorphic operations
 
@@ -460,6 +469,144 @@ Ciphertext encryptedClass = serverCs.evaluateArgmax(encryptedScores, 8, clientCs
 assert clientCs.decrypt(encryptedClass).equals(BigInteger.ONE);
 ```
 
+### Hyperplane and naive Bayes classifiers
+
+Together with [decision trees](#decision-trees), Damgard-Geisler-Kroigaard supports the
+classifiers of Bost et al. over encrypted data: hyperplane classifiers, e.g. logistic regression or
+linear SVM, and naive Bayes. The client encrypts its features, the server evaluates its private
+model on them, and finds the predicted class with [encrypted argmax](#encrypted-argmax). The client
+learns only the predicted class, and the server learns nothing about the features. Scores of
+classes must fit into about 30 bits, so floats must be quantized to integers.
+
+```java
+// client encrypts its features: income and debt in thousands, years of employment, late payments
+LightPHE clientCs = LightPHE.builder().algorithmName("Damgard-Geisler-Kroigaard").build();
+List<Ciphertext> encryptedFeatures =
+        Stream.of(85L, 20L, 6L, 0L).map(clientCs::encrypt).toList();
+
+// bank's logistic regression model, quantized by 1000: class 1 approves the loan
+LightPHE serverCs = LightPHE.builder()
+        .algorithmName("Damgard-Geisler-Kroigaard")
+        .keys(Keys.of(clientCs.cs().keys().publicKey(), null))
+        .build();
+List<List<Long>> weights = List.of(List.of(0L, 0L, 0L, 0L), List.of(42L, -65L, 310L, -900L));
+List<Long> biases = List.of(0L, -1200L);
+
+// absolute values of scores must be less than 2^bitLength
+Ciphertext encryptedClass = serverCs.evaluateHyperplane(
+        encryptedFeatures, weights, 16, clientCs::answerArgmax, biases);
+assert clientCs.decrypt(encryptedClass).equals(BigInteger.ONE);
+```
+
+Naive Bayes works with categorical features, which the client encrypts as one-hot vectors. The
+server quantizes the logarithms of its probabilities, which must be positive, e.g. smoothed with
+Laplace smoothing.
+
+```java
+// continuing with clientCs and serverCs above
+// patient encrypts symptoms: fever (no, yes), cough (none, dry, wet), fatigue (no, yes)
+List<List<Ciphertext>> encryptedSymptoms =
+        clientCs.encryptNaiveBayesInput(List.of(1, 1, 1), List.of(2, 3, 2));
+
+// clinic's model: P(diagnosis) and P(symptom | diagnosis) for cold, flu and allergy
+List<Double> priors = List.of(0.36, 0.36, 0.28);
+List<List<List<Double>>> likelihoods = List.of(
+        List.of(List.of(0.71, 0.29), List.of(0.12, 0.25, 0.63), List.of(0.71, 0.29)),
+        List.of(List.of(0.29, 0.71), List.of(0.12, 0.63, 0.25), List.of(0.29, 0.71)),
+        List.of(List.of(0.83, 0.17), List.of(0.57, 0.29, 0.14), List.of(0.67, 0.33)));
+Ciphertext diagnosis = serverCs.evaluateNaiveBayes(
+        encryptedSymptoms, priors, likelihoods, clientCs::answerArgmax);
+
+// patient learns only the most likely diagnosis: flu
+assert clientCs.decrypt(diagnosis).equals(BigInteger.ONE);
+```
+
+Scenarios:
+
+- A customer applies for a loan from a mobile app, and the bank runs its credit scoring model on
+  the encrypted income and debts, so the customer learns only whether the loan is approved, and the
+  bank neither reveals its model nor sees the financial details before the customer agrees to share
+  them.
+- A patient checks symptoms with an online clinic, whose diagnosis model was trained on years of
+  patient records, so the patient learns the most likely diagnosis without revealing the symptoms,
+  and the clinic does not give away its model.
+- An email client asks a spam filtering service whether a message is spam, and the service
+  classifies the encrypted word counts of the message, so it never reads the email.
+
+### Encrypted nearest neighbor search
+
+`lightphe4j` can find the k nearest vectors to an encrypted query, e.g. searching a face embedding
+in a gallery, without revealing the query. Embeddings must be quantized to integers first, e.g. by
+scaling and rounding. There are two settings.
+
+If the server owns the gallery in plain, the client encrypts its query with
+Damgard-Geisler-Kroigaard, and the server finds the nearest vectors with
+[encrypted argmax](#encrypted-argmax). The server learns neither the query nor the result, and the
+client learns only the indices or labels of the k nearest vectors, neither the distances nor the
+other vectors.
+
+```java
+import io.github.serengil.lightphe.model.EncryptedKnnQuery;
+import io.github.serengil.lightphe.model.KnnResult;
+
+// client encrypts its face embedding, quantized to integers
+LightPHE clientCs = LightPHE.builder().algorithmName("Damgard-Geisler-Kroigaard").build();
+EncryptedKnnQuery encryptedQuery = clientCs.encryptKnnQuery(List.of(12L, -7L, 33L, 5L));
+
+// server finds the 2 nearest vectors of its gallery - squared distances must fit into bitLength bits
+LightPHE serverCs = LightPHE.builder()
+        .algorithmName("Damgard-Geisler-Kroigaard")
+        .keys(Keys.of(clientCs.cs().keys().publicKey(), null))
+        .build();
+List<List<Long>> gallery = List.of(
+        List.of(10L, -5L, 30L, 4L), List.of(-40L, 22L, 1L, 9L), List.of(13L, -8L, 35L, 6L));
+List<Long> people = List.of(101L, 102L, 103L);
+KnnResult result = serverCs.evaluateKnn(encryptedQuery, gallery, 2, 16, clientCs::answerKnn, people);
+
+// client learns only who the nearest people are
+assert result.labels().stream().map(clientCs::decrypt).toList()
+        .equals(List.of(BigInteger.valueOf(103), BigInteger.valueOf(101)));
+```
+
+If the gallery itself is stored in an untrusted cloud, the owner encrypts both the gallery and its
+queries with the [Catalano-Fiore](#adding-multiplication-support-to-additive-algorithms) boost. The
+cloud computes encrypted squared distances with the public key only, and the owner decrypts them to
+find the nearest vectors. The cloud learns nothing.
+
+```java
+// owner encrypts its gallery once, uploads it, and then encrypts queries
+LightPHE ownerCs = LightPHE.builder().algorithmName("Paillier").boost("Catalano-Fiore").build();
+List<List<CatalanoFioreCiphertext>> encryptedGallery = gallery.stream()
+        .map(vector -> vector.stream().map(ownerCs::encryptBoosted).toList())
+        .toList();
+List<CatalanoFioreCiphertext> query =
+        Stream.of(12L, -7L, 33L, 5L).map(ownerCs::encryptBoosted).toList();
+
+// cloud computes encrypted distances with the public key only
+LightPHE cloudCs = LightPHE.builder()
+        .algorithmName("Paillier")
+        .keys(Keys.of(ownerCs.cs().keys().publicKey(), null))
+        .boost("Catalano-Fiore")
+        .build();
+List<CatalanoFioreCiphertext> encryptedDistances = cloudCs.evaluateKnnDistances(query, encryptedGallery);
+
+// owner decrypts them and finds the nearest vectors
+assert ownerCs.decryptKnn(encryptedDistances, 2).indices().equals(List.of(2, 0));
+```
+
+Scenarios:
+
+- A user unlocks a door by face, and the building's server matches the encrypted face embedding
+  against its gallery of employees, so the server never sees the user's face and the user learns
+  only whether they are recognized, not who else is enrolled.
+- A bank checks whether a new customer's encrypted face embedding matches anyone on a sanctions
+  list held by a screening provider, so the provider does not learn the customer and the bank does
+  not get the list.
+- A company keeps the face embeddings of its employees in a public cloud, and searches them with
+  encrypted queries, so a breach of the cloud reveals neither the gallery nor the queries.
+- A retailer recommends products by finding the nearest items to a user's encrypted preference
+  vector, so the server does not learn the user's taste.
+
 ### Master key decryption
 
 Bresson-Catalano-Pointcheval has two ways to decrypt a ciphertext. Each user decrypts with its own
@@ -500,7 +647,413 @@ assert authorityCs.decryptWithMasterKey(bobCiphertext).equals(BigInteger.valueOf
 
 Encrypted tensors of any user are decrypted with `decryptTensorWithMasterKey` in the same way.
 
-### Verifiable encryption
+### Threshold decryption
+
+ElGamal, Exponential ElGamal, Elliptic Curve ElGamal, Paillier and Damgard-Jurik support threshold
+decryption. ElGamal and Exponential ElGamal keys must be generated with `primeOrder(true)` for
+this. A dealer splits the private key into shares, and any `threshold` of `parties` shareholders
+decrypt a ciphertext together, whereas fewer shareholders learn nothing. For instance, a board of 5
+directors can let any 3 of them decrypt the company's encrypted data, so neither a single director
+can read it alone nor losing 2 of them blocks access.
+
+```java
+import io.github.serengil.lightphe.model.PartialDecryption;
+
+// dealer splits the private key into 5 shares, any 3 of them can decrypt
+LightPHE dealerCs = LightPHE.builder().algorithmName("Paillier").build();
+List<Keys> shareKeys = dealerCs.generateThresholdKeys(3, 5);
+
+// dealer forgets the private key, and publishes the public key with threshold parameters
+dealerCs.exportKeys(Path.of("public.txt"), true);
+
+// each share key is sent to its own shareholder secretly
+List<LightPHE> shareholders = shareKeys.stream()
+        .map(keys -> LightPHE.builder().algorithmName("Paillier").keys(keys).build())
+        .toList();
+
+// anyone encrypts and computes homomorphically with the public key
+LightPHE publicCs = LightPHE.builder()
+        .algorithmName("Paillier")
+        .keyFile(Path.of("public.txt"))
+        .build();
+Ciphertext c = publicCs.encrypt(100).add(publicCs.encrypt(50));
+
+// any 3 shareholders decrypt partially, a single partial decryption reveals nothing
+List<PartialDecryption> partials = Stream.of(0, 2, 4)
+        .map(i -> shareholders.get(i).partialDecrypt(c))
+        .toList();
+
+// anyone having the public key combines partial decryptions
+assert publicCs.combinePartialDecryptions(c, partials).equals(BigInteger.valueOf(150));
+```
+
+Encrypted tensors are decrypted partially with `partialDecryptTensor` and restored with
+`combineTensorPartialDecryptions`. The dealer knows the private key while splitting it, so it must
+be trusted. By default, partial decryptions are not proven, so a cheating shareholder can cause a
+wrong plaintext silently. [Proof of partial decryption](#proof-of-partial-decryption) prevents
+this. Exporting keys with `publicOnly = true` drops the share of a shareholder as well.
+
+### Secure aggregation for federated learning
+
+In federated learning, clients train a model on their private data and send only model updates to
+a server, but updates can still leak the data. `lightphe4j` lets clients encrypt their updates, the
+server sum them without decrypting, and a committee holding shares of the private key decrypt only
+the sum with [threshold decryption](#threshold-decryption). Updates are quantized with the precision
+of the cryptosystem, and many values are packed into a single ciphertext, so a client encrypts one
+ciphertext per chunk instead of one per value. With 1024-bit keys, 40 values fit into a ciphertext.
+Paillier and Damgard-Jurik support this.
+
+```java
+import io.github.serengil.lightphe.model.Aggregate;
+import io.github.serengil.lightphe.model.EncryptedUpdate;
+
+// dealer splits the key among a committee of 5, any 3 of them can decrypt
+LightPHE dealerCs = LightPHE.builder().algorithmName("Paillier").safePrimes(true).build();
+List<Keys> shareKeys = dealerCs.generateThresholdKeys(3, 5);
+List<LightPHE> committee = shareKeys.stream()
+        .map(keys -> LightPHE.builder().algorithmName("Paillier").keys(keys).build())
+        .toList();
+Keys publicKey = Keys.of(dealerCs.cs().keys().publicKey(), null);
+
+// each client encrypts its update with the public key - values must be in [-maxValue, maxValue]
+LightPHE clientCs = LightPHE.builder().algorithmName("Paillier").keys(publicKey).build();
+List<List<Double>> updates = List.of(
+        List.of(0.12, -0.53, 0.98), List.of(0.33, 0.21, -0.47), List.of(-0.25, 0.08, 0.61));
+List<EncryptedUpdate> encryptedUpdates = updates.stream()
+        .map(update -> clientCs.encryptUpdate(update, 1, 100))
+        .toList();
+
+// server sums encrypted updates without decrypting them
+LightPHE serverCs = LightPHE.builder().algorithmName("Paillier").keys(publicKey).build();
+EncryptedUpdate encryptedSum = serverCs.aggregateUpdates(encryptedUpdates);
+
+// any 3 members decrypt the sum only, and prove their partial decryptions
+List<List<PartialDecryption>> partials = committee.subList(0, 3).stream()
+        .map(member -> member.partialDecryptAggregate(encryptedSum, true))
+        .toList();
+Aggregate result = serverCs.combineAggregate(encryptedSum, partials, true);
+
+// mean is [0.0667, -0.08, 0.3733]
+assert Math.abs(result.mean().get(1) + 0.08) < 1e-9;
+```
+
+The maximum number of clients reserves room in each slot, so that the sum of that many updates
+never overflows into the next value, and the server refuses to sum more. Clients must use the same
+key, length, precision, maximum value and maximum number of clients. Updates of dropped clients
+are simply not summed, and the sum can still be decrypted if up to 2 committee members drop out.
+If a single party holds the private key instead of a committee, it restores the sum with
+`decryptAggregate`.
+
+Scenarios:
+
+- Hospitals train a model to detect tumors on their own scans, and a central server averages their
+  encrypted model updates, so neither the server nor the other hospitals see any hospital's update,
+  which could leak information about its patients.
+- A keyboard app improves next-word prediction from millions of phones, and a committee of
+  independent organizations decrypts only the average update of each round, so no single party,
+  including the app maker, can inspect the update of a particular phone.
+- Banks build a shared fraud detection model, and verified partial decryptions stop a dishonest
+  committee member from slipping a manipulated average into the shared model.
+
+### Zero-knowledge proofs
+
+`lightphe4j` lets you prove facts about ciphertexts and decryptions without revealing the
+plaintexts or the private key, and anyone having the public key can verify them. For instance, a
+voter proves that a ballot is 0 or 1, an employee proves that an encrypted salary is in a sensible
+range, and an authority proves that the announced tally is really what the encrypted tally
+contains. A proven value is returned as `Proven<T>`, carrying the value and its `Proof`. Proofs are
+made non-interactive with the Fiat-Shamir heuristic, hashing the same transcript as the Python
+library.
+
+| Algorithm | Proof of<br>Decryption | Proof of<br>Partial Decryption | Proof of<br>Knowledge | Proof of<br>Allowed Values | Proof of<br>Range | E-Voting | Verifiable<br>Encryption |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ElGamal | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Exponential ElGamal | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Elliptic Curve ElGamal | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Paillier | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Damgard-Jurik | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Camenisch-Shoup | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+ElGamal and Exponential ElGamal keys must be generated with `primeOrder(true)` for proofs. Paillier
+and Damgard-Jurik keys must be generated with `safePrimes(true)` for proof of partial decryption.
+
+Proofs take an optional context, public data bound to the proof such as the id of the prover, so a
+copied proof is rejected for another context. A context may be `null`, a string, a number, a
+boolean, or a list or map of them.
+
+#### Proof of decryption
+
+The private key owner can prove that a ciphertext decrypts to a plaintext, and anyone can check it
+with the public key only. ElGamal family uses a Chaum-Pedersen zero-knowledge proof, so the private
+key is never revealed. Paillier and Damgard-Jurik reveal the randomness of the ciphertext instead,
+which proves the plaintext and reveals nothing about the private key or other ciphertexts.
+
+```java
+import io.github.serengil.lightphe.model.Proven;
+
+// private key owner builds the cryptosystem and publishes its public key
+LightPHE cs = LightPHE.builder().algorithmName("Exponential-ElGamal").primeOrder(true).build();
+cs.exportKeys(Path.of("public.txt"), true);
+LightPHE publicCs = LightPHE.builder()
+        .algorithmName("Exponential-ElGamal")
+        .keyFile(Path.of("public.txt"))
+        .build();
+
+Ciphertext c = publicCs.encrypt(17).add(publicCs.encrypt(25));
+
+// private key owner decrypts with a proof
+Proven<BigInteger> decryption = cs.decryptWithProof(c);
+BigInteger plaintext = decryption.value();
+
+// anyone verifies it with public key only
+assert publicCs.verifyDecryption(c, plaintext, decryption.proof());
+assert !publicCs.verifyDecryption(c, plaintext.add(BigInteger.ONE), decryption.proof());
+```
+
+Scenarios:
+
+- An election authority announces that 5,000 of 8,000 encrypted ballots are yes, and publishes a
+  proof, so every voter can check that the announced result is really what the encrypted tally
+  contains without trusting the authority.
+- A cloud service computes the average salary over encrypted payroll data of a client company and
+  decrypts it with a proof, so an external auditor can confirm that the reported average was not
+  altered on its way to the board.
+- A bank publishes the decrypted total of a day's encrypted transactions together with a proof, so
+  a regulator can verify the total without being given the bank's private key or the individual
+  transactions.
+
+#### Proof of partial decryption
+
+In [threshold decryption](#threshold-decryption), a cheating shareholder can send a wrong partial
+decryption and cause a wrong plaintext silently. A cheating shareholder can even shift the result
+by any amount it chooses, e.g. add 50 votes to a party, because lagrange coefficients of other
+shareholders are public. Shareholders can opt in to prove that their partial decryptions are
+computed with their own shares, and the combiner can opt in to verify them. Then, invalid or
+unproven partial decryptions are discarded. Paillier and Damgard-Jurik keys must be generated with
+`safePrimes(true)` for this.
+
+```java
+// dealer splits the private key into 3 shares, any 2 of them can decrypt
+LightPHE dealerCs = LightPHE.builder().algorithmName("Exponential-ElGamal").primeOrder(true).build();
+List<LightPHE> shareholders = dealerCs.generateThresholdKeys(2, 3).stream()
+        .map(keys -> LightPHE.builder().algorithmName("Exponential-ElGamal").keys(keys).build())
+        .toList();
+
+Ciphertext c = dealerCs.encrypt(42);
+
+// shareholders opt in to prove their partial decryptions
+List<PartialDecryption> partials = shareholders.stream()
+        .map(shareholder -> shareholder.partialDecrypt(c, true))
+        .toList();
+
+// anyone verifies a partial decryption with public key only, e.g. to find a cheating shareholder
+assert dealerCs.verifyPartialDecryption(c, partials.get(0));
+
+// combiner opts in to verify partial decryptions while combining them
+assert dealerCs.combinePartialDecryptions(c, partials, true).equals(BigInteger.valueOf(42));
+```
+
+Scenarios:
+
+- Three trustees nominated by competing parties decrypt an election tally together, so a trustee
+  who tries to add 50 votes to its own party by tampering with its partial decryption is detected
+  and outvoted by the honest two.
+- Five hospitals hold shares of a key protecting encrypted patient statistics, and any three of
+  them decrypt the yearly average together, so a single hospital cannot quietly bias the published
+  average in its favor.
+- Servers of a federated learning committee decrypt the sum of encrypted model updates from
+  thousands of phones, so a compromised server cannot slip a poisoned update into the global model
+  without being caught.
+- Two of three auditors are required to open the total of a company's encrypted transactions, so an
+  auditor bribed to hide a loss cannot misreport the total.
+
+#### Proof of knowledge
+
+Anyone having the public key can encrypt a value and prove knowledge of it, without revealing it.
+Otherwise, someone could copy another one's ciphertext, re-randomize it or modify it
+homomorphically, and submit it as their own without knowing the plaintext. The proof is bound to
+the ciphertext and a context such as the id of the encryptor.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("Paillier").build();
+
+// alice submits her sealed bid with a proof of knowledge
+Proven<Ciphertext> alice = cs.encryptWithProofOfKnowledge(950, "alice");
+assert cs.verifyKnowledge(alice.value(), alice.proof(), "alice");
+
+// mallory outbids alice by adding 1 to her encrypted bid without knowing it, but cannot prove it
+Ciphertext malloryBid = alice.value().add(cs.encrypt(1));
+assert !cs.verifyKnowledge(malloryBid, alice.proof(), "mallory");
+```
+
+Scenarios:
+
+- In a sealed-bid auction, Mallory sees Alice's encrypted bid and submits it plus 1 to win by the
+  smallest margin without knowing the amount, but she cannot prove knowledge of that bid, so her
+  submission is rejected.
+- On a crowdfunding platform, a backer cannot copy a large encrypted pledge of another backer and
+  scale it to look generous, because each pledge must come with a proof that its owner knows the
+  amount.
+- In an encrypted employee survey, a participant cannot re-randomize a colleague's encrypted answer
+  and submit it as their own to double its weight, because a re-randomized copy cannot be proven.
+
+#### Proof of allowed values
+
+Anyone having the public key can encrypt a value and prove that it is one of the allowed values,
+without revealing which one. Allowed values default to `[0, 1]` when `null` is passed.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("Paillier").build();
+List<Integer> stars = List.of(1, 2, 3, 4, 5);
+
+// a customer rates a product from 1 to 5 stars, and proves it without revealing the rating
+Proven<Ciphertext> rating = cs.encryptWithProof(4, stars, "customer-42");
+
+// anyone verifies it with public key only
+assert cs.verifyCiphertext(rating.value(), rating.proof(), stars, "customer-42");
+assert !cs.verifyCiphertext(rating.value(), rating.proof(), stars, "customer-43");
+```
+
+Scenarios:
+
+- An online shop collects encrypted product ratings, and each customer proves that the rating is
+  between 1 and 5 stars, so nobody can submit a rating of 1,000 to push the average up while
+  individual ratings stay private.
+- A company runs an anonymous satisfaction survey with answers from 1 (poor) to 4 (excellent), and
+  each employee proves that the encrypted answer is one of them, so the average satisfaction is
+  computed homomorphically and a malformed answer cannot corrupt it.
+- In [e-voting](#e-voting), each voter proves that the ballot is 0 or 1, so nobody can cast a vote
+  of 100 in the homomorphic tally without revealing how they voted.
+
+#### Proof of range
+
+Anyone having the public key can encrypt a value and prove that it is in `[low, high]`, without
+revealing it. Proof size grows with the bit length of `high - low`.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("Paillier").build();
+
+// an employee proves that the encrypted salary is in [0, 500000], so cannot skew the average
+Proven<Ciphertext> salary = cs.encryptWithRangeProof(85000, 0, 500000, "alice");
+
+// anyone verifies it with public key only
+assert cs.verifyRange(salary.value(), salary.proof(), 0, 500000, "alice");
+assert !cs.verifyRange(salary.value(), salary.proof(), 0, 50000, "alice");
+```
+
+Scenarios:
+
+- In an industry salary survey, each employee encrypts the salary with a proof that it is between 0
+  and 500,000, so a single participant cannot submit a negative or a billion-dollar salary to skew
+  the published average.
+- A website requires visitors to be adults, and a visitor proves that the encrypted age is between
+  18 and 120 without revealing the exact age or birth date.
+- In a participatory budget, each citizen allocates up to 1,000 to public projects in encrypted
+  form, so allocations are proven to be within the cap while individual preferences stay private.
+- A lender accepts an encrypted credit score with a proof that it is between 650 and 850, so the
+  applicant shows eligibility without revealing the exact score.
+
+#### E-voting
+
+[Proof of allowed values](#proof-of-allowed-values) makes e-voting possible. Each voter proves that
+a ballot is 0 or 1, so cannot cast a vote of 100 in the homomorphic tally. The proof is bound to
+the id of the voter, so a copied ballot is rejected. Then, the authority decrypts the tally with a
+[proof of decryption](#proof-of-decryption).
+
+```java
+// authority builds the cryptosystem and publishes its public key
+LightPHE authorityCs =
+        LightPHE.builder().algorithmName("Exponential-ElGamal").primeOrder(true).build();
+authorityCs.exportKeys(Path.of("public.txt"), true);
+LightPHE publicCs = LightPHE.builder()
+        .algorithmName("Exponential-ElGamal")
+        .keyFile(Path.of("public.txt"))
+        .build();
+
+// each voter encrypts a vote of 0 or 1 with a proof, having the public key only
+Proven<Ciphertext> alice = publicCs.encryptWithProof(1, null, "alice");
+Proven<Ciphertext> bob = publicCs.encryptWithProof(0, null, "bob");
+
+// anyone verifies ballots without decrypting them
+assert publicCs.verifyCiphertext(alice.value(), alice.proof(), null, "alice");
+assert publicCs.verifyCiphertext(bob.value(), bob.proof(), null, "bob");
+
+// mallory's copy of alice's ballot is rejected
+assert !publicCs.verifyCiphertext(alice.value(), alice.proof(), null, "mallory");
+
+// valid ballots are tallied homomorphically, and the authority decrypts the tally with a proof
+Ciphertext tally = alice.value().add(bob.value());
+Proven<BigInteger> result = authorityCs.decryptWithProof(tally);
+assert publicCs.verifyDecryption(tally, result.value(), result.proof());
+assert result.value().equals(BigInteger.ONE);
+```
+
+For an election of parties, a vote for party `k` can be encrypted as `base^k`, so the tally keeps
+the votes of each party in its own digit in that base. The proof guarantees that a voter votes once
+for exactly one party. `base` must be greater than the votes a party can get, e.g. 100 allows up to
+99 votes per party, and `base^parties` must be less than the modulus. Paillier fits here, as the
+tally is a large number.
+
+```java
+// a vote for party k is encrypted as 100^k, i.e. 1 for red, 100 for green and 10000 for blue
+List<String> parties = List.of("red", "green", "blue");
+List<Long> values = List.of(1L, 100L, 10000L);
+
+LightPHE authorityCs = LightPHE.builder().algorithmName("Paillier").build();
+Proven<Ciphertext> alice = authorityCs.encryptWithProof(values.get(0), values, "alice");
+Proven<Ciphertext> bob = authorityCs.encryptWithProof(values.get(2), values, "bob");
+Proven<Ciphertext> carol = authorityCs.encryptWithProof(values.get(0), values, "carol");
+assert authorityCs.verifyCiphertext(alice.value(), alice.proof(), values, "alice");
+
+// tally is 2 x 1 + 0 x 100 + 1 x 10000 = 10002, read 2 digits at a time from right: 1 | 00 | 02
+Ciphertext tally = alice.value().add(bob.value()).add(carol.value());
+BigInteger result = authorityCs.decryptWithProof(tally).value();
+assert result.equals(BigInteger.valueOf(10002));
+```
+
+Alternatively, for an election of many parties, each voter casts a one-hot ballot, i.e. one
+ciphertext per party where only the chosen party is 1, with a proof that exactly one party is
+chosen. Summing ballots slot by slot counts the votes of each party separately, so the number of
+parties is not limited.
+
+```java
+LightPHE authorityCs =
+        LightPHE.builder().algorithmName("Exponential-ElGamal").primeOrder(true).build();
+List<String> parties = List.of("red", "green", "blue", "yellow");
+
+// each voter encrypts a vote for one party as a one-hot ballot with a proof
+Proven<List<Ciphertext>> alice = authorityCs.encryptOneHot(parties.indexOf("red"), 4, "alice");
+Proven<List<Ciphertext>> bob = authorityCs.encryptOneHot(parties.indexOf("blue"), 4, "bob");
+
+// anyone verifies ballots without decrypting them
+assert authorityCs.verifyOneHot(alice.value(), alice.proof(), "alice");
+assert authorityCs.verifyOneHot(bob.value(), bob.proof(), "bob");
+
+// valid ballots are summed slot by slot, so each party's votes are counted in its own ciphertext
+List<BigInteger> votes = new ArrayList<>();
+for (int k = 0; k < parties.size(); k++) {
+    Ciphertext count = alice.value().get(k).add(bob.value().get(k));
+    votes.add(authorityCs.decryptWithProof(count).value());
+}
+assert votes.equals(List.of(BigInteger.ONE, BigInteger.ZERO, BigInteger.ONE, BigInteger.ZERO));
+```
+
+Scenarios:
+
+- A city runs a referendum on a new park, and every resident casts an encrypted yes or no ballot
+  with a proof, so the city announces the result with a proof of decryption while nobody, including
+  the city, learns how an individual voted.
+- A national election of a few parties encrypts a vote for party k as `base^k`, so a single
+  homomorphic sum and a single decryption reveal the votes of every party at once.
+- A national election of dozens of parties uses one-hot ballots of `encryptOneHot` and
+  `verifyOneHot`, so each party's votes are counted in its own ciphertext and the number of parties
+  is not limited.
+- Shareholders of a company vote on the board's proposals, and three independent trustees decrypt
+  the tally with [threshold decryption](#threshold-decryption) and
+  [proof of partial decryption](#proof-of-partial-decryption), so no single trustee can read or
+  alter the result.
+
+#### Verifiable encryption
 
 Camenisch-Shoup lets you encrypt a secret for someone else and prove that the ciphertext really
 contains it, without revealing the secret. For instance, Alice can escrow the private key of her
@@ -545,6 +1098,17 @@ Private keys of other curves can be escrowed by passing `form` and `curve` while
 cryptosystem. Verifiable ciphertexts reject any modification, so homomorphic operations are
 applied to regular ciphertexts created with `encrypt`. Proofs are interoperable with the Python
 library.
+
+Scenarios:
+
+- Alice escrows the private key of her crypto wallet with a trusted third party, and her bank
+  verifies that the escrow really contains the key before granting her a loan, without ever seeing
+  the key.
+- A company escrows the encryption keys of its employees with a recovery service, so an auditor can
+  verify that every key is recoverable if an employee leaves, while neither the auditor nor the
+  service can use the keys under normal conditions.
+- A crypto exchange verifies that a customer's key is escrowed under conditions agreed with a
+  regulator, e.g. release only with a court order, without learning the key itself.
 
 ### Adding multiplication support to additive algorithms
 
@@ -597,8 +1161,8 @@ d grows d times. Only integers are supported.
 ### Post-quantum security
 
 Most algorithms in LightPHE rely on factoring or discrete logarithm problems, which a large enough
-quantum computer could solve with Shor's algorithm. Regev and Brakerski-Vaikuntanathan rely on
-learning with errors problems instead, which are believed to be hard for quantum computers too.
+quantum computer could solve with Shor's algorithm. Regev, Lyubashevsky-Peikert-Regev, ML-KEM,
+Brakerski-Vaikuntanathan and Gentry-Sahai-Waters rely on learning with errors problems instead, which are believed to be hard for quantum computers too.
 Their default key sizes give about 128-bit security against quantum attacks.
 
 Regev is additively homomorphic. Its key size is the lattice dimension, and its default is 2048.
@@ -611,6 +1175,43 @@ Ciphertext c2 = cs.encrypt(2500);
 
 assert cs.decrypt(c1.add(c2)).equals(BigInteger.valueOf(4000));
 assert cs.decrypt(c1.multiply(3)).equals(BigInteger.valueOf(4500));
+```
+
+Lyubashevsky-Peikert-Regev is Regev over a polynomial ring, so its security relies on the ring
+learning with errors problem like Brakerski-Vaikuntanathan. Its random matrix is replaced by a
+single polynomial, so it generates keys and encrypts faster than Regev with the same key and
+ciphertext sizes. Its key size is the degree of its polynomial ring, and its default is 2048.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("Lyubashevsky-Peikert-Regev").build();
+
+Ciphertext c1 = cs.encrypt(1500);
+Ciphertext c2 = cs.encrypt(2500);
+
+assert cs.decrypt(c1.add(c2)).equals(BigInteger.valueOf(4000));
+assert cs.decrypt(c1.multiply(3)).equals(BigInteger.valueOf(4500));
+```
+
+ML-KEM uses the parameter sets standardized by NIST in FIPS 203: ML-KEM-512, ML-KEM-768 and
+ML-KEM-1024. It is homomorphic with respect to the exclusive or of 256-bit messages like
+Goldwasser-Micali. Its key size is the parameter set, and its default is 768. Notice that this is
+the CPA secure public key encryption K-PKE inside ML-KEM, without ciphertext compression and
+without the transform that makes ML-KEM CCA secure, because a CCA secure scheme cannot be
+homomorphic. So, it is not a FIPS 203 compliant ML-KEM implementation, and its keys and
+ciphertexts are not interoperable with other libraries. Its modulus is small, so only a few
+ciphertexts can be combined: exclusive or of 6 ciphertexts fails with a probability of about 2^-50
+for ML-KEM-768.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("ML-KEM").build();
+
+BigInteger m1 = new BigInteger("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 16);
+BigInteger m2 = new BigInteger("fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321", 16);
+
+Ciphertext c1 = cs.encrypt(m1);
+Ciphertext c2 = cs.encrypt(m2);
+
+assert cs.decrypt(c1.xor(c2)).equals(m1.xor(m2));
 ```
 
 Brakerski-Vaikuntanathan additionally supports one multiplication of ciphertexts like
@@ -630,9 +1231,29 @@ assert cs.decrypt(c1.multiply(c2).multiply(2).add(c1.multiply(c3)))
         .equals(BigInteger.valueOf(2250));
 ```
 
+Gentry-Sahai-Waters encrypts bits, and supports both exclusive or and and, so boolean circuits can
+be evaluated on encrypted bits with more than one multiplication. Exclusive or is almost free.
+Products of products work up to a multiplicative depth of 2, e.g. `(a & b) & (c & d)`, whereas
+chains like `acc = acc & fresh`, e.g. carries of a ripple carry adder, can be very long because
+each step adds a small fixed noise. Its key size is the degree of its polynomial ring, and its
+default is 2048. A ciphertext is about 256 KB.
+
+```java
+LightPHE cs = LightPHE.builder().algorithmName("Gentry-Sahai-Waters").build();
+
+Ciphertext a = cs.encrypt(1);
+Ciphertext b = cs.encrypt(1);
+Ciphertext c = cs.encrypt(0);
+Ciphertext d = cs.encrypt(1);
+
+// majority of three bits, and a product of products
+assert cs.decrypt(a.and(b).xor(a.and(c)).xor(b.and(c))).equals(BigInteger.ONE);
+assert cs.decrypt(a.and(b).and(c.and(d))).equals(BigInteger.ZERO);
+```
+
 Every ciphertext of these algorithms carries a small noise, which grows with each homomorphic
 operation, and decryption silently fails once it grows too much. With default settings,
-plaintexts must be less than 2^24. Regev has room for thousands of additions or multiplications
+plaintexts must be less than 2^24. Regev and Lyubashevsky-Peikert-Regev have room for thousands of additions or multiplications
 with constants up to a few thousands, and a product of Brakerski-Vaikuntanathan has room for
 millions of times more noise. You can increase the plaintext space with `plaintextLimit` in
 exchange of less room for noise. Floats and tensors are not supported. Public matrices are expanded
