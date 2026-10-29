@@ -82,6 +82,31 @@ class ReadmeExamplesTest {
     }
 
     @Test
+    @DisplayName("README: sending ciphertexts over network")
+    void sendingCiphertextsOverNetwork() {
+        // client encrypts its value and sends it to the server
+        LightPHE clientCs = LightPHE.builder().algorithmName("Paillier").build();
+        String data = clientCs.serialize(clientCs.encrypt(17));
+
+        // server restores the ciphertext with the client's public key only, and computes on it
+        LightPHE serverCs =
+                LightPHE.builder()
+                        .algorithmName("Paillier")
+                        .keys(clientCs.cs().keys().publicOnly())
+                        .build();
+        Ciphertext c = serverCs.deserialize(data, Ciphertext.class);
+        String response = serverCs.serialize(c.add(serverCs.encrypt(25)));
+
+        // client decrypts the response
+        assertThat(clientCs.decrypt(clientCs.deserialize(response, Ciphertext.class)))
+                .isEqualTo(BigInteger.valueOf(42));
+
+        // a single ciphertext can be converted into a map as well
+        assertThat(clientCs.decrypt(clientCs.fromDict(c.toDict(), Ciphertext.class)))
+                .isEqualTo(BigInteger.valueOf(17));
+    }
+
+    @Test
     @DisplayName("README: elliptic curve cryptosystem and curve inventory")
     void ellipticCurveWorkflow() {
         LightPHE phe =

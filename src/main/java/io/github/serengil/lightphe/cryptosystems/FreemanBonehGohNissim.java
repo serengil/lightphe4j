@@ -82,7 +82,7 @@ public final class FreemanBonehGohNissim extends AbstractHomomorphic {
     private static final int MAX_ORDER_BITS = 256;
 
     /** A ciphertext is a vector of DIMENSION points, a multiplied one DIMENSION^2 elements. */
-    private static final int DIMENSION = 3;
+    public static final int DIMENSION = 3;
 
     private static final BigInteger FOUR = BigInteger.valueOf(4);
 

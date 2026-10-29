@@ -1,8 +1,10 @@
 package io.github.serengil.lightphe.model;
 
+import io.github.serengil.lightphe.commons.Serialization;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A ciphertext of the {@link CatalanoFiore} transform. It is either non-multiplied as {@code (a,
@@ -36,7 +38,7 @@ public final class CatalanoFioreCiphertext {
         return new CatalanoFioreCiphertext(cs, a, beta, null, List.of());
     }
 
-    private static CatalanoFioreCiphertext multiplied(
+    static CatalanoFioreCiphertext multiplied(
             Homomorphic cs, Ciphertext alpha, List<Ciphertext[]> pairs) {
         return new CatalanoFioreCiphertext(cs, null, null, alpha, pairs);
     }
@@ -244,6 +246,16 @@ public final class CatalanoFioreCiphertext {
         if (!other.modulo().equals(modulo())) {
             throw new IllegalArgumentException("Ciphertexts belong to different cryptosystems");
         }
+    }
+
+    /**
+     * Converts the ciphertext into a json serializable dict to send it to another party. Keys are
+     * not included, the receiver restores it with {@code fromDict} of its {@code LightPHE}.
+     *
+     * @return serialized ciphertext
+     */
+    public Map<String, Object> toDict() {
+        return Serialization.toDict(this);
     }
 
     @Override

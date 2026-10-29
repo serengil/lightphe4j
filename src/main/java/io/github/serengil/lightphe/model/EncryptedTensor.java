@@ -2,12 +2,14 @@ package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.commons.Logger;
 import io.github.serengil.lightphe.commons.PheUtils;
+import io.github.serengil.lightphe.commons.Serialization;
 import io.github.serengil.lightphe.cryptosystems.JoyeLibert;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.Getter;
@@ -308,6 +310,16 @@ public final class EncryptedTensor {
         }
 
         return new EncryptedTensor(sums, cs, precision);
+    }
+
+    /**
+     * Converts the encrypted tensor into a json serializable dict to send it to another party. Keys
+     * are not included, the receiver restores it with {@code fromDict} of its {@code LightPHE}.
+     *
+     * @return serialized encrypted tensor
+     */
+    public Map<String, Object> toDict() {
+        return Serialization.toDict(this);
     }
 
     @Override

@@ -1,9 +1,11 @@
 package io.github.serengil.lightphe.model;
 
 import io.github.serengil.lightphe.commons.PheUtils;
+import io.github.serengil.lightphe.commons.Serialization;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
 import io.github.serengil.lightphe.model.value.CipherValue;
 import java.math.BigInteger;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -206,6 +208,16 @@ public final class Ciphertext {
         if (cs.keys().publicKey() == null || cs.keys().publicKey().isEmpty()) {
             throw new IllegalArgumentException("You must have public key to perform " + operation);
         }
+    }
+
+    /**
+     * Converts the ciphertext into a json serializable dict to send it to another party. Keys are
+     * not included, the receiver restores it with {@code fromDict} of its {@code LightPHE}.
+     *
+     * @return serialized ciphertext
+     */
+    public Map<String, Object> toDict() {
+        return Serialization.toDict(this);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package io.github.serengil.lightphe;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import io.github.serengil.lightphe.model.Keys;
 import io.github.serengil.lightphe.model.KeysCodec;
@@ -33,5 +34,19 @@ class ExportingKeysTest {
                 .as("private key is not available in the public key file")
                 .isFalse();
         assertThat(exported.publicKey()).containsKeys("n", "e");
+    }
+
+    @Test
+    @DisplayName("Content of a key file is not executed while restoring keys")
+    void testMaliciousKeyFileIsNotExecuted(@TempDir Path tempDir) throws IOException {
+        Path markerFile = tempDir.resolve("pwned.txt");
+        Path keyFile = tempDir.resolve("malicious.lphe");
+        String payload = "__import__('pathlib').Path('" + markerFile + "').write_text('pwned')";
+        Files.writeString(keyFile, payload, StandardCharsets.UTF_8);
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> LightPHE.builder().algorithmName("RSA").keyFile(keyFile).build());
+
+        assertThat(markerFile).doesNotExist();
     }
 }

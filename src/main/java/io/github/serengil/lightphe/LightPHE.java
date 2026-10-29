@@ -1,18 +1,24 @@
 package io.github.serengil.lightphe;
 
 import io.github.serengil.lightphe.commons.Classifiers;
+import io.github.serengil.lightphe.commons.Json;
 import io.github.serengil.lightphe.commons.KeyValidator;
 import io.github.serengil.lightphe.commons.Logger;
 import io.github.serengil.lightphe.commons.NearestNeighbors;
 import io.github.serengil.lightphe.commons.PheUtils;
 import io.github.serengil.lightphe.commons.SecureAggregation;
+import io.github.serengil.lightphe.commons.Serialization;
 import io.github.serengil.lightphe.commons.Threshold;
 import io.github.serengil.lightphe.commons.Zkp;
+import io.github.serengil.lightphe.cryptosystems.BonehGohNissim;
 import io.github.serengil.lightphe.cryptosystems.CryptosystemFactory;
 import io.github.serengil.lightphe.cryptosystems.DamgardGeislerKroigaard;
 import io.github.serengil.lightphe.cryptosystems.DamgardJurik;
+import io.github.serengil.lightphe.cryptosystems.FreemanBonehGohNissim;
 import io.github.serengil.lightphe.cryptosystems.GentrySahaiWaters;
 import io.github.serengil.lightphe.ecc.CurvePoint;
+import io.github.serengil.lightphe.ecc.LightECC;
+import io.github.serengil.lightphe.ecc.PointNotOnCurveException;
 import io.github.serengil.lightphe.model.Aggregate;
 import io.github.serengil.lightphe.model.AggregationLayout;
 import io.github.serengil.lightphe.model.Algorithm;
@@ -39,7 +45,10 @@ import io.github.serengil.lightphe.model.Proven;
 import io.github.serengil.lightphe.model.PublicOnlyView;
 import io.github.serengil.lightphe.model.VerifiableCiphertext;
 import io.github.serengil.lightphe.model.value.CipherValue;
+import io.github.serengil.lightphe.model.value.Fp2Value;
 import io.github.serengil.lightphe.model.value.IntValue;
+import io.github.serengil.lightphe.model.value.PointValue;
+import io.github.serengil.lightphe.model.value.TupleValue;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -107,6 +116,9 @@ public final class LightPHE {
      * can be expensive.
      */
     private volatile Homomorphic publicCs;
+
+    /** Catalano-Fiore transform restoring deserialized ciphertexts, built on first use. */
+    private volatile CatalanoFiore deserializationCatalanoFiore;
 
     /**
      * Builds a LightPHE cryptosystem.
@@ -2075,6 +2087,285 @@ public final class LightPHE {
             throw new IllegalArgumentException("File " + targetFile + " must have public_key key");
         }
         return keys;
+    }
+
+    // -----------------------------------------------------------------------
+    // Serialization
+    // -----------------------------------------------------------------------
+
+    /**
+     * Serializes ciphertexts, proofs or messages of interactive protocols into json to send them to
+     * another party. Keys are never serialized, the receiver restores ciphertexts with its own
+     * keys. The json is compatible with the Python library.
+     *
+     * @param item Ciphertext, CatalanoFioreCiphertext, EncryptedTensor, a proof or a message of an
+     *     interactive protocol, e.g. outputs of encryptWithProof, encryptKnnQuery, encryptUpdate or
+     *     partialDecrypt and messages sent to the client callable of evaluateArgmax or evaluateKnn,
+     *     or null, Boolean, Number, String, List and Map of them
+     * @return serialized item
+     * @throws IllegalArgumentException when the item cannot be serialized
+     */
+    public String serialize(Object item) {
+        return Json.write(Serialization.encode(item));
+    }
+
+    /**
+     * Restores ciphertexts, proofs or messages of interactive protocols serialized by another
+     * party. Ciphertexts are restored with the public key of this cryptosystem.
+     *
+     * @param data output of serialize
+     * @return restored item. Records such as proofs are restored as maps, integers as BigInteger,
+     *     and tuples as lists. Use {@link #deserialize(String, Class)} to restore a record.
+     * @throws IllegalArgumentException when the data is malformed
+     */
+    public Object deserialize(String data) {
+        return fromDict(parseSerialized(data));
+    }
+
+    /**
+     * Restores an item serialized by another party as the given type, e.g. a {@link Proof}, a
+     * {@link Proven} ciphertext, a {@link PartialDecryption} or an {@link EncryptedUpdate}.
+     *
+     * @param data output of serialize
+     * @param type expected type of the item
+     * @param <T> expected type of the item
+     * @return restored item
+     * @throws IllegalArgumentException when the data is malformed or not of the given type
+     */
+    public <T> T deserialize(String data, Class<T> type) {
+        return fromDict(parseSerialized(data), type);
+    }
+
+    /**
+     * Restores a list serialized by another party, converting its items to the given type, e.g.
+     * partial decryptions or the answers of the client in encrypted argmax.
+     *
+     * @param data output of serialize
+     * @param type expected type of the items
+     * @param <T> expected type of the items
+     * @return restored list
+     * @throws IllegalArgumentException when the data is malformed or not a list of the given type
+     */
+    public <T> List<T> deserializeList(String data, Class<T> type) {
+        return Serialization.convertList(deserialize(data), type, this::normalizeSerialized);
+    }
+
+    /**
+     * Restores ciphertexts from their dict forms created by toDict, or any json serializable form
+     * created by serialize. Ciphertexts are restored with the public key of this cryptosystem.
+     *
+     * @param data output of toDict of Ciphertext, CatalanoFioreCiphertext or EncryptedTensor
+     * @return restored item
+     * @throws IllegalArgumentException when the data is malformed
+     */
+    public Object fromDict(Object data) {
+        return Serialization.decode(data, this::restoreSerialized);
+    }
+
+    /**
+     * Restores an item from its json serializable form as the given type.
+     *
+     * @param data output of toDict, or any json serializable form created by serialize
+     * @param type expected type of the item
+     * @param <T> expected type of the item
+     * @return restored item
+     * @throws IllegalArgumentException when the data is malformed or not of the given type
+     */
+    public <T> T fromDict(Object data, Class<T> type) {
+        return Serialization.convert(fromDict(data), type, this::normalizeSerialized);
+    }
+
+    private static Object parseSerialized(String data) {
+        try {
+            return Json.read(data);
+        } catch (IllegalArgumentException err) {
+            throw new IllegalArgumentException("Serialized data is not a valid json", err);
+        }
+    }
+
+    /** Builds a deserialized object with the keys of this cryptosystem. */
+    private Object restoreSerialized(String kind, Map<String, Object> fields) {
+        if (Serialization.POINT.equals(kind)) {
+            return restorePoint(fields.get("x"), fields.get("y"));
+        }
+
+        String expected =
+                Serialization.TENSOR.equals(kind)
+                        ? Serialization.tensorAlgorithmName(cs.algorithm())
+                        : algorithmName.algorithmName();
+        if (!expected.equals(fields.get("algorithm_name"))) {
+            throw new IllegalArgumentException(
+                    "Serialized "
+                            + kind
+                            + " belongs to "
+                            + fields.get("algorithm_name")
+                            + ", but this cryptosystem is "
+                            + expected);
+        }
+
+        if (Serialization.CIPHERTEXT.equals(kind)) {
+            return buildCiphertext(normalizeSerialized((CipherValue) fields.get("value")));
+        }
+
+        if (Serialization.TENSOR.equals(kind)) {
+            List<Fraction> fractions = new ArrayList<>();
+            for (Object item : (List<?>) fields.get("fractions")) {
+                Fraction fraction = (Fraction) item;
+                fractions.add(
+                        Fraction.builder()
+                                .dividend(normalizeSerialized(fraction.dividend()))
+                                .absDividend(normalizeSerialized(fraction.absDividend()))
+                                .divisor(normalizeSerialized(fraction.divisor()))
+                                .sign(fraction.sign())
+                                .build());
+            }
+            int tensorPrecision;
+            try {
+                tensorPrecision = ((BigInteger) fields.get("precision")).intValueExact();
+            } catch (ArithmeticException err) {
+                throw new IllegalArgumentException("Precision of a tensor is out of range", err);
+            }
+            // builds the public-key-only cryptosystem on first use
+            return new EncryptedTensor(
+                    fractions, buildCiphertext(IntValue.of(0)).cs(), tensorPrecision);
+        }
+
+        return restoreCatalanoFiore(fields);
+    }
+
+    private CipherValue restorePoint(Object x, Object y) {
+        LightECC ec;
+        if (cs instanceof BonehGohNissim bgn) {
+            ec = bgn.ec();
+        } else if (cs instanceof FreemanBonehGohNissim fbgn) {
+            ec = fbgn.ec();
+        } else {
+            throw new IllegalArgumentException(
+                    algorithmName.algorithmName() + " ciphertexts are not elliptic curve points");
+        }
+        for (Object coordinate : new Object[] {x, y}) {
+            if (!(coordinate instanceof BigInteger) && !(coordinate instanceof Double)) {
+                throw new IllegalArgumentException(
+                        "Coordinates of an elliptic curve point must be integers");
+            }
+        }
+        if (x instanceof Double || y instanceof Double) {
+            // identity element of weierstrass and koblitz curves is (inf, inf)
+            if (Double.valueOf(Double.POSITIVE_INFINITY).equals(x)
+                    && Double.valueOf(Double.POSITIVE_INFINITY).equals(y)
+                    && ec.o().isInfinity()) {
+                return PointValue.atInfinity();
+            }
+            throw new IllegalArgumentException("Serialized point is not on the curve");
+        }
+        try {
+            return PointValue.from(ec.point((BigInteger) x, (BigInteger) y));
+        } catch (PointNotOnCurveException err) {
+            throw new IllegalArgumentException("Serialized point is not on the curve", err);
+        }
+    }
+
+    private CatalanoFioreCiphertext restoreCatalanoFiore(Map<String, Object> fields) {
+        CatalanoFiore cf = deserializationCatalanoFiore;
+        if (cf == null) {
+            cf = catalanoFiore != null ? catalanoFiore : new CatalanoFiore(cs);
+            deserializationCatalanoFiore = cf;
+        }
+        Object a = fields.get("a");
+        Object beta = fields.get("beta");
+        Object alpha = fields.get("alpha");
+        List<?> pairs = (List<?>) fields.get("pairs");
+
+        if (alpha == null) {
+            if (!(a instanceof BigInteger plain)
+                    || plain.signum() < 0
+                    || plain.compareTo(cf.plaintextModulo()) >= 0) {
+                throw new IllegalArgumentException(
+                        "a of a Catalano-Fiore ciphertext must be in [0, "
+                                + cf.plaintextModulo()
+                                + ")");
+            }
+            if (!(beta instanceof Ciphertext encryptedB) || !pairs.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Non-multiplied Catalano-Fiore ciphertext must have a and beta only");
+            }
+            return cf.restore(plain, encryptedB);
+        }
+
+        if (a != null || beta != null || !(alpha instanceof Ciphertext encryptedAlpha)) {
+            throw new IllegalArgumentException(
+                    "Multiplied Catalano-Fiore ciphertext must have alpha and pairs only");
+        }
+        List<Ciphertext[]> restoredPairs = new ArrayList<>(pairs.size());
+        for (Object pair : pairs) {
+            List<?> items = (List<?>) pair;
+            if (!(items.get(0) instanceof Ciphertext first)
+                    || !(items.get(1) instanceof Ciphertext second)) {
+                throw new IllegalArgumentException(
+                        "Pairs of a Catalano-Fiore ciphertext must have ciphertexts");
+            }
+            restoredPairs.add(new Ciphertext[] {first, second});
+        }
+        return cf.restore(encryptedAlpha, restoredPairs);
+    }
+
+    /**
+     * Converts a deserialized ciphertext content into the shape this cryptosystem expects. The
+     * Python library keeps points of elliptic curve ElGamal and Freeman's Boneh-Goh-Nissim, and
+     * elements of {@code F_{p^2}}, as tuples.
+     */
+    private CipherValue normalizeSerialized(CipherValue value) {
+        if (!(value instanceof TupleValue tuple)) {
+            return value;
+        }
+        return switch (algorithmName) {
+            case ELLIPTIC_CURVE_EL_GAMAL -> toPoints(tuple);
+            case BONEH_GOH_NISSIM -> isIntegerPair(tuple) ? toFp2(tuple) : tuple;
+            case FREEMAN_BONEH_GOH_NISSIM -> {
+                // 3 points, or 9 elements of F_{p^2} once multiplied
+                boolean multiplied =
+                        tuple.size()
+                                == FreemanBonehGohNissim.DIMENSION
+                                        * FreemanBonehGohNissim.DIMENSION;
+                List<CipherValue> items = new ArrayList<>(tuple.size());
+                for (CipherValue item : tuple.items()) {
+                    if (item instanceof TupleValue pair && isIntegerPair(pair)) {
+                        items.add(multiplied ? toFp2(pair) : toPoint(pair));
+                    } else {
+                        items.add(item);
+                    }
+                }
+                yield TupleValue.of(items);
+            }
+            default -> tuple;
+        };
+    }
+
+    private static CipherValue toPoints(TupleValue tuple) {
+        if (isIntegerPair(tuple)) {
+            return toPoint(tuple);
+        }
+        List<CipherValue> items = new ArrayList<>(tuple.size());
+        for (CipherValue item : tuple.items()) {
+            items.add(item instanceof TupleValue nested ? toPoints(nested) : item);
+        }
+        return TupleValue.of(items);
+    }
+
+    private static boolean isIntegerPair(TupleValue tuple) {
+        return tuple.size() == 2
+                && tuple.get(0) instanceof IntValue
+                && tuple.get(1) instanceof IntValue;
+    }
+
+    private static PointValue toPoint(TupleValue pair) {
+        List<BigInteger> coordinates = pair.asIntegers();
+        return PointValue.of(coordinates.get(0), coordinates.get(1));
+    }
+
+    private static Fp2Value toFp2(TupleValue pair) {
+        List<BigInteger> coordinates = pair.asIntegers();
+        return new Fp2Value(coordinates.get(0), coordinates.get(1));
     }
 
     // -----------------------------------------------------------------------
