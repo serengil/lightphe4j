@@ -162,6 +162,28 @@ public final class CatalanoFiore {
     }
 
     /**
+     * Restores a non-multiplied ciphertext received from another party.
+     *
+     * @param a the plain part {@code m - b} in {@code [0, M)}
+     * @param beta the encryption of b
+     * @return the non-multiplied ciphertext
+     */
+    public CatalanoFioreCiphertext restore(BigInteger a, Ciphertext beta) {
+        return CatalanoFioreCiphertext.nonMultiplied(publicCs, a, beta);
+    }
+
+    /**
+     * Restores a multiplied ciphertext received from another party.
+     *
+     * @param alpha the encryption of the folded plain terms
+     * @param pairs the pairs of encrypted b values
+     * @return the multiplied ciphertext
+     */
+    public CatalanoFioreCiphertext restore(Ciphertext alpha, List<Ciphertext[]> pairs) {
+        return CatalanoFioreCiphertext.multiplied(publicCs, alpha, pairs);
+    }
+
+    /**
      * Decrypts a ciphertext created by the transform. Requires the private key.
      *
      * @param ciphertext a non-multiplied or multiplied ciphertext

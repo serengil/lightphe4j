@@ -237,6 +237,43 @@ assert cs.decrypt(c1Prime).equals(BigInteger.valueOf(m1));
 assert cs.decrypt(c1).equals(BigInteger.valueOf(m1));
 ```
 
+### Sending ciphertexts over network
+
+Ciphertexts, proofs and messages of interactive protocols can be serialized into json to be sent to another party. Keys are never serialized, the receiver restores ciphertexts with its own public key. `serialize` handles ciphertexts nested in lists and maps, and records such as a ciphertext with its proof, an encrypted update for secure aggregation, or a message sent to the `client` callable of encrypted argmax and nearest neighbor search. The json is the same as the one of the [Python library](https://github.com/serengil/LightPHE), so the two can talk to each other.
+
+```java
+// client encrypts its value and sends it to the server
+LightPHE clientCs = LightPHE.builder().algorithmName("Paillier").build();
+String data = clientCs.serialize(clientCs.encrypt(17));
+
+// server restores the ciphertext with the client's public key only, and computes on it
+LightPHE serverCs = LightPHE.builder()
+        .algorithmName("Paillier")
+        .keys(clientCs.cs().keys().publicOnly())
+        .build();
+Ciphertext c = serverCs.deserialize(data, Ciphertext.class);
+String response = serverCs.serialize(c.add(serverCs.encrypt(25)));
+
+// client decrypts the response
+assert clientCs.decrypt(clientCs.deserialize(response, Ciphertext.class)).equals(BigInteger.valueOf(42));
+
+// a single ciphertext can be converted into a map as well
+assert clientCs.decrypt(clientCs.fromDict(c.toDict(), Ciphertext.class)).equals(BigInteger.valueOf(17));
+```
+
+Records such as `Proven`, `Proof`, `PartialDecryption`, `EncryptedKnnQuery`, `KnnResult` or `EncryptedUpdate` are restored by passing their type to `deserialize`, and lists of them with `deserializeList`. To run an interactive protocol across machines, wrap the network call with the `client` callable:
+
+```java
+Function<ArgmaxMessage, List<BigInteger>> client = message -> {
+    // e.g. an http request to the client, which answers with
+    // clientCs.serialize(clientCs.answerKnn(clientCs.deserialize(body, ArgmaxMessage.class)))
+    String body = post(CLIENT_URL, serverCs.serialize(message));
+    return serverCs.deserializeList(body, BigInteger.class);
+};
+
+KnnResult result = serverCs.evaluateKnn(encryptedQuery, gallery, 2, 16, client);
+```
+
 ### Elliptic curve cryptography
 
 ECC is a powerful public-key cryptosystem based on the algebraic structure of elliptic curves over
